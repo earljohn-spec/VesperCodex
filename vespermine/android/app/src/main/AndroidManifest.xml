@@ -1,0 +1,87 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Permissions -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
+    <uses-permission android:name="com.android.vending.BILLING"/>
+    
+    <!-- AdMob: com.google.android.gms.AD_VERSION not needed with Google Play services -->
+    
+    <application
+        android:label="VesperMine"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher"
+        android:enableOnBackInvokedCallback="true">
+        
+        <!-- Main Activity -->
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/LaunchTheme"
+            android:configChanges="orientation|keyboardHidden|keyboard|screenSize|smallestScreenSize|locale|layoutDirection|fontScale|screenLayout|density|uiMode"
+            android:hardwareAccelerated="true"
+            android:windowSoftInputMode="adjustResize">
+            
+            <meta-data
+                android:name="io.flutter.embedding.android.NormalTheme"
+                android:resource="@style/NormalTheme"/>
+            
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            
+            <!-- Deep link handling for referrals -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="vespermine"
+                    android:host="referral"/>
+            </intent-filter>
+        </activity>
+        
+        <!-- Don't delete the meta-data below.
+             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <meta-data
+            android:name="flutterEmbedding"
+            android:value="2"/>
+        
+        <!-- ============================================ -->
+        <!-- AdMob Application ID                         -->
+        <!-- REPLACE with your real AdMob App ID          -->
+        <!-- Test ID: ca-app-pub-3940256099942544~3347511713 -->
+        <!-- ============================================ -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
+        
+        <!-- Enable test ads during development -->
+        <!-- REMOVE before production release -->
+        <meta-data
+            android:name="com.google.android.gms.ads.AD_MANAGER_APP"
+            android:value="false"/>
+        
+        <!-- Firebase Analytics -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="true"/>
+        
+        <!-- Firebase Crashlytics -->
+        <meta-data
+            android:name="firebase_crashlytics_collection_enabled"
+            android:value="true"/>
+    </application>
+    
+    <!-- Required for Android 11+ to query packages -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+    </queries>
+</manifest>

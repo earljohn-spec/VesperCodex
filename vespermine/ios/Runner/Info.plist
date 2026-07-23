@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>VesperMine</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>vespermine</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	
+	<!-- ============================================ -->
+	<!-- AdMob Application ID                         -->
+	<!-- REPLACE with your real AdMob App ID          -->
+	<!-- Test ID: ca-app-pub-3940256099942544~1459256601 -->
+	<!-- ============================================ -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1459256601</string>
+	
+	<!-- AdMob SKAdNetwork identifiers for iOS 14+ -->
+	<key>SKAdNetworkItems</key>
+	<array>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cstr6suwn9.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>4fzdc2evr5.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>4pfyvq9l8r.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>2fnua5tdw4.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>ydx93a7ass.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>5a6flpkh64.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>p78ahlhber.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>v72qych5uu.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>ludvb6z3bs.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>cp8zw746q7.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>3sh42y64q3.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>c6k4g5qg8m.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>s39g8k73mm.skadnetwork</string>
+		</dict>
+		<dict>
+			<key>SKAdNetworkIdentifier</key>
+			<string>3rd42ekr43.skadnetwork</string>
+		</dict>
+	</array>
+	
+	<!-- Biometric Auth (Face ID / Touch ID) -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>Use Face ID to securely sign in to VesperMine</string>
+	
+	<!-- URL Schemes for deep linking -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>vespermine</string>
+			</array>
+			<key>CFBundleURLName</key>
+			<string>com.vespercodex.vespermine</string>
+		</dict>
+	</array>
+	
+	<!-- Camera (for QR code scanning of wallet addresses) -->
+	<key>NSCameraUsageDescription</key>
+	<string>Scan QR codes to link Bitcoin wallets</string>
+	
+	<!-- Privacy - Tracking (iOS 14+ ATT) -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This identifier will be used to deliver personalized ads and improve your mining experience.</string>
+	
+	<!-- Background modes -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
+</dict>
+</plist>

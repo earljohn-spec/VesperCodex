@@ -1,0 +1,97 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper: Check if user is authenticated
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Helper: Check if user owns the document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+    
+    // Helper: Check if user's subscription allows access
+    function hasActiveSubscription() {
+      return isSignedIn() && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscriptionTier != 'banned';
+    }
+
+    // ============= USERS COLLECTION =============
+    match /users/{userId} {
+      // Users can read their own profile
+      allow read: if isOwner(userId);
+      // Users can create their own profile on signup
+      allow create: if isOwner(userId) && 
+        request.resource.data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'avatarUrl', 'referralCode',
+          'referredBy', 'createdAt', 'lastActiveAt', 'emailVerified',
+          'totalEarned', 'currentBalance', 'currentStreak',
+          'subscriptionTier', 'totalReferrals', 'totalTasksCompleted',
+          'miningHoursTotal', 'lastCheckIn'
+        ]) &&
+        request.resource.data.subscriptionTier == 'free' &&
+        request.resource.data.currentBalance == 0;
+      // Users can update their own profile (but not balance/tier - server only)
+      allow update: if isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'currentBalance', 'totalEarned', 'subscriptionTier'
+        ]);
+      // Prevent deletion
+      allow delete: if false;
+    }
+    
+    // ============= MINING SESSIONS =============
+    match /users/{userId}/miningSessions/{sessionId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && 
+        request.resource.data.userId == userId;
+      allow update: if isOwner(userId);
+      allow delete: if false;
+    }
+    
+    // ============= TRANSACTIONS =============
+    match /users/{userId}/transactions/{transactionId} {
+      allow read: if isOwner(userId);
+      // Only server can create transactions
+      allow create: if false;
+      allow update, delete: if false;
+    }
+    
+    // ============= TASKS COMPLETION =============
+    match /users/{userId}/taskCompletions/{completionId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && 
+        request.resource.data.userId == userId;
+      allow update, delete: if false;
+    }
+    
+    // ============= REFERRALS =============
+    match /referrals/{referralCode} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if false;
+    }
+    
+    // ============= GLOBAL CONFIG =============
+    match /config/{docId} {
+      // Anyone authenticated can read config (prices, mining rates)
+      allow read: if isSignedIn();
+      // Only admins can write
+      allow write: if false;
+    }
+    
+    // ============= DAILY TASKS (Read-only) =============
+    match /tasks/{taskId} {
+      allow read: if isSignedIn();
+      allow write: if false;
+    }
+    
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.packages
+.pub/
+build/
+
+# Firebase
+firebase/functions/lib/
+firebase/functions/node_modules/
+firebase/.firebaserc
+firebase/firebase-debug.log
+
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Keys & secrets
+*.jks
+*.keystore
+key.properties
+.env
+
+# Platform build
+android/.gradle/
+android/local.properties
+ios/.symlinks/
+ios/Pods/
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+
+# Testing
+coverage/
+package-lock.json
