@@ -1,0 +1,256 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink-50: #f6f6fb;
+  --color-ink-100: #ecebf5;
+  --color-ink-200: #d7d5e8;
+  --color-ink-300: #b4b0d1;
+  --color-ink-400: #8b85b4;
+  --color-ink-500: #6b6499;
+  --color-ink-600: #554e7d;
+  --color-ink-700: #454065;
+  --color-ink-800: #2e2a47;
+  --color-ink-900: #1c1930;
+  --color-ink-950: #110f1e;
+
+  --color-vesper-50: #f4f2ff;
+  --color-vesper-100: #ebe6ff;
+  --color-vesper-200: #d9d1ff;
+  --color-vesper-300: #bdabff;
+  --color-vesper-400: #9d7cff;
+  --color-vesper-500: #8250fb;
+  --color-vesper-600: #762ef3;
+  --color-vesper-700: #661cd7;
+  --color-vesper-800: #5619b0;
+  --color-vesper-900: #48178f;
+
+  --color-calm-400: #38bdf8;
+  --color-calm-500: #0ea5e9;
+  --color-calm-600: #0284c7;
+
+  /* System stack — renders natively everywhere, no webfont round-trip. */
+  --font-sans:
+    ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+  --animate-fade-in: fade-in 0.35s ease-out both;
+  --animate-slide-up: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-breathe: breathe 16s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  --animate-pulse-ring: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    transform: scale(0.82);
+    opacity: 0.55;
+  }
+  25%,
+  50% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  75% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  border-color: color-mix(in oklab, var(--color-ink-700) 55%, transparent);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(1100px 620px at 8% -8%, rgba(130, 80, 251, 0.16), transparent 62%),
+    radial-gradient(900px 520px at 100% 0%, rgba(14, 165, 233, 0.11), transparent 58%),
+    radial-gradient(700px 700px at 50% 120%, rgba(130, 80, 251, 0.08), transparent 60%),
+    var(--color-ink-950);
+  color: var(--color-ink-100);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* --------------------------------- utils -------------------------------- */
+
+@utility glass {
+  background: color-mix(in oklab, var(--color-ink-900) 72%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid color-mix(in oklab, var(--color-ink-700) 60%, transparent);
+}
+
+@utility card {
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklab, var(--color-ink-900) 88%, transparent),
+    color-mix(in oklab, var(--color-ink-950) 88%, transparent)
+  );
+  border: 1px solid color-mix(in oklab, var(--color-ink-700) 55%, transparent);
+  border-radius: 1rem;
+}
+
+@utility focus-ring {
+  outline: none;
+  &:focus-visible {
+    box-shadow:
+      0 0 0 2px var(--color-ink-950),
+      0 0 0 4px var(--color-vesper-500);
+  }
+}
+
+@utility skeleton {
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--color-ink-800) 60%, transparent) 25%,
+    color-mix(in oklab, var(--color-ink-700) 70%, transparent) 50%,
+    color-mix(in oklab, var(--color-ink-800) 60%, transparent) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* ------------------------------- scrollbar ------------------------------ */
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-ink-700) 70%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklab, var(--color-ink-600) 85%, transparent);
+  background-clip: content-box;
+}
+
+/* range inputs ----------------------------------------------------------- */
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    var(--color-vesper-600) var(--pct, 50%),
+    color-mix(in oklab, var(--color-ink-700) 70%, transparent) var(--pct, 50%)
+  );
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 20px;
+  width: 20px;
+  margin-top: -6px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid var(--color-vesper-500);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--color-ink-700) 70%, transparent);
+}
+input[type="range"]::-moz-range-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--color-vesper-600);
+}
+input[type="range"]::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 999px;
+  background: #fff;
+  border: 3px solid var(--color-vesper-500);
+}
+
+/* prose-ish for chat bubbles --------------------------------------------- */
+
+.msg strong {
+  color: #fff;
+  font-weight: 600;
+}
+.msg em {
+  color: var(--color-ink-200);
+}
+.msg p + p {
+  margin-top: 0.75rem;
+}
+.msg ul {
+  margin-top: 0.5rem;
+  padding-left: 1.1rem;
+  list-style: disc;
+}
+.msg li + li {
+  margin-top: 0.25rem;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
