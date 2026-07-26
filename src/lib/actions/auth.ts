@@ -76,8 +76,23 @@ export async function logoutAction() {
 }
 
 export async function demoLoginAction(): Promise<void> {
-  const row = findUserByEmail("maya@vesper.app");
-  if (!row) throw new Error("Demo account unavailable. Run `npm run db:seed` first.");
+  let row = findUserByEmail("maya@vesper.app");
+
+  // If the database was never seeded (e.g. `next dev` run directly instead of
+  // `npm run dev`), create the demo account on the fly rather than erroring.
+  // It gets starter content instead of the full 60-day history — running
+  // `npm run db:seed` still gives the richer narrative.
+  if (!row) {
+    row = createUser({
+      email: "maya@vesper.app",
+      name: "Maya Okonkwo",
+      password: "wellness123",
+      focusAreas: ["burnout recovery", "sleep", "boundaries at work"],
+      timezone: "Europe/London",
+    });
+    seedStarterContent(row.id, row.name);
+  }
+
   await createSession(row.id);
   redirect("/dashboard");
 }
