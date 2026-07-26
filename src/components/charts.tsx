@@ -6,8 +6,38 @@ import { cn } from "@/lib/utils";
 /* Lightweight, dependency-free SVG charts tuned for the Vesper palette. */
 
 export interface SeriesPoint {
+  /**
+   * ISO date (`YYYY-MM-DD`) for daily series, or a full ISO timestamp for
+   * intraday series. Values need not be unique — React keys are derived from
+   * the index, since two samples can share a calendar day.
+   */
   date: string;
   value: number | null;
+}
+
+/** How to label the x-axis and tooltips. */
+export type AxisMode = "date" | "time";
+
+function labelFor(raw: string, mode: AxisMode, long = false): string {
+  // Bare `YYYY-MM-DD` is parsed as UTC by Date, which shifts the day in
+  // negative-offset timezones — pin it to local midnight instead.
+  const d = new Date(/^\d{4}-\d{2}-\d{2}$/.test(raw) ? `${raw}T00:00:00` : raw);
+  if (Number.isNaN(d.getTime())) return raw;
+  if (mode === "time") {
+    return long
+      ? d.toLocaleString(undefined, {
+          weekday: "short",
+          hour: "numeric",
+          minute: "2-digit",
+        })
+      : d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  }
+  return d.toLocaleDateString(
+    undefined,
+    long
+      ? { weekday: "short", month: "short", day: "numeric" }
+      : { month: "short", day: "numeric" },
+  );
 }
 
 function buildPath(points: { x: number; y: number }[], smoothing = 0.18) {
@@ -49,6 +79,7 @@ export function LineChart({
   fillFrom = "rgba(130,80,251,0.28)",
   formatValue = (v: number) => v.toFixed(1),
   bands,
+  axis = "date",
   className,
 }: {
   series: SeriesPoint[];
@@ -59,6 +90,8 @@ export function LineChart({
   fillFrom?: string;
   formatValue?: (v: number) => string;
   bands?: { from: number; to: number; color: string }[];
+  /** `date` for one-point-per-day series, `time` for intraday samples. */
+  axis?: AxisMode;
   className?: string;
 }) {
   const [hover, setHover] = React.useState<number | null>(null);
@@ -181,17 +214,16 @@ export function LineChart({
 
         {series.map((p, i) =>
           i % Math.max(1, Math.ceil(series.length / 6)) === 0 ? (
+            // Keyed by index: intraday series repeat the same calendar date,
+            // so `p.date` is not a unique identity.
             <text
-              key={p.date}
+              key={`tick-${i}`}
               x={xFor(i)}
               y={height - 5}
               textAnchor="middle"
               className="fill-ink-500 text-[9px]"
             >
-              {new Date(`${p.date}T00:00:00`).toLocaleDateString(undefined, {
-                month: "short",
-                day: "numeric",
-              })}
+              {labelFor(p.date, axis)}
             </text>
           ) : null,
         )}
@@ -203,13 +235,7 @@ export function LineChart({
           style={{ left: active.x, top: active.y - 10 }}
         >
           <div className="font-semibold text-white">{formatValue(active.value)}</div>
-          <div className="text-ink-400">
-            {new Date(`${active.date}T00:00:00`).toLocaleDateString(undefined, {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            })}
-          </div>
+          <div className="text-ink-400">{labelFor(active.date, axis, true)}</div>
         </div>
       )}
     </div>

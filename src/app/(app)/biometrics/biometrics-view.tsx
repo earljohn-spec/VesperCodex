@@ -168,15 +168,11 @@ export function BiometricsView({
 
   /* -------------------------------- charts -------------------------------- */
 
-  // Samples are intraday, so label the x-axis by time rather than date.
-  const hrvSeries = samples.map((s) => ({
-    date: s.recordedAt.slice(0, 10),
-    value: s.hrv,
-  }));
-  const stressSeries = samples.map((s) => ({
-    date: s.recordedAt.slice(0, 10),
-    value: s.stressIndex,
-  }));
+  // Samples are intraday: keep the full timestamp so the axis can label by
+  // time. Truncating to YYYY-MM-DD would collapse 24h of readings onto one or
+  // two labels (and previously collided React keys).
+  const hrvSeries = samples.map((s) => ({ date: s.recordedAt, value: s.hrv }));
+  const stressSeries = samples.map((s) => ({ date: s.recordedAt, value: s.stressIndex }));
 
   return (
     <div className="mx-auto max-w-7xl p-5 lg:p-8">
@@ -276,6 +272,7 @@ export function BiometricsView({
                 <LineChart
                   series={hrvSeries}
                   height={160}
+                  axis="time"
                   min={10}
                   max={Math.max(90, ...samples.map((s) => s.hrv ?? 0)) + 10}
                   color="#6ee7b7"
@@ -290,6 +287,7 @@ export function BiometricsView({
                 <LineChart
                   series={stressSeries}
                   height={130}
+                  axis="time"
                   min={0}
                   max={100}
                   color="#fbbf24"
