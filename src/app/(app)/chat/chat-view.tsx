@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import {
   Archive,
   Brain,
-  Check,
   MessageCircleHeart,
   Mic,
   Pencil,
@@ -16,22 +15,21 @@ import {
   Sparkles,
   Trash2,
   Wind,
-  X,
 } from "lucide-react";
 import {
   Badge,
   Button,
   ConfirmDialog,
-  EmptyState,
   Input,
   Textarea,
   Tooltip,
   useToast,
 } from "@/components/ui";
-import { PageHeader, RichText } from "@/components/shared";
+import { RichText } from "@/components/shared";
 import { BreathingPlayer } from "@/components/breathing";
 import { OfflineBanner, useOffline } from "@/components/offline";
 import { cn, initials, relativeTime } from "@/lib/utils";
+import { useSyncedState } from "@/lib/use-synced-state";
 import type { Conversation, Intervention, Message, User } from "@/lib/types";
 
 interface Props {
@@ -66,7 +64,7 @@ export function ChatView({
   const toast = useToast();
   const { offline } = useOffline();
 
-  const [conversations, setConversations] = React.useState(initialConversations);
+  const [conversations, setConversations] = useSyncedState(initialConversations);
   const [activeId, setActiveId] = React.useState(initialActiveId);
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
   const [input, setInput] = React.useState("");
@@ -81,11 +79,17 @@ export function ChatView({
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
 
-  React.useEffect(() => setConversations(initialConversations), [initialConversations]);
-  React.useEffect(() => {
+  // Re-sync the open thread when the server sends a different conversation
+  // (adjust-state-on-prop-change, not an effect).
+  const [prevThread, setPrevThread] = React.useState({ initialMessages, initialActiveId });
+  if (
+    prevThread.initialMessages !== initialMessages ||
+    prevThread.initialActiveId !== initialActiveId
+  ) {
+    setPrevThread({ initialMessages, initialActiveId });
     setMessages(initialMessages);
     setActiveId(initialActiveId);
-  }, [initialMessages, initialActiveId]);
+  }
 
   React.useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });

@@ -35,6 +35,7 @@ import { VoiceRecorder } from "@/components/voice-recorder";
 import { OfflineBanner, offlineFetch, useOffline } from "@/components/offline";
 import { cn, formatDate, formatTime, relativeTime } from "@/lib/utils";
 import { EMOTION_TAGS, type EmotionTag, type JournalEntry } from "@/lib/types";
+import { useSyncedState } from "@/lib/use-synced-state";
 import type { JournalStats } from "@/lib/repos/journal";
 
 /** Keyword → emotion, used to pre-tag an entry as you write or speak it. */
@@ -91,7 +92,7 @@ export function JournalView({ entries, stats, trend, emotions, openNew, focusEnt
   const toast = useToast();
   const { offline } = useOffline();
 
-  const [items, setItems] = React.useState(entries);
+  const [items, setItems] = useSyncedState(entries);
   const [editorOpen, setEditorOpen] = React.useState(!!openNew);
   const [editing, setEditing] = React.useState<JournalEntry | null>(null);
   const [draft, setDraft] = React.useState<Draft>(BLANK);
@@ -103,14 +104,14 @@ export function JournalView({ entries, stats, trend, emotions, openNew, focusEnt
   const [emotionFilter, setEmotionFilter] = React.useState<string>("");
   const [autoTagged, setAutoTagged] = React.useState<EmotionTag[]>([]);
 
-  React.useEffect(() => setItems(entries), [entries]);
 
-  React.useEffect(() => {
-    if (focusEntry) {
-      const found = entries.find((e) => e.id === focusEntry);
-      if (found) setViewing(found);
-    }
-  }, [focusEntry, entries]);
+  // Open the entry named in ?entry=… once, when that param changes.
+  const [prevFocus, setPrevFocus] = React.useState<string | undefined>(undefined);
+  if (focusEntry !== prevFocus) {
+    setPrevFocus(focusEntry);
+    const found = focusEntry ? entries.find((e) => e.id === focusEntry) : undefined;
+    if (found) setViewing(found);
+  }
 
   /* ------------------------------- filtering ------------------------------ */
 

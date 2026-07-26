@@ -23,6 +23,9 @@ type SpeechRecognitionLike = {
   onend: (() => void) | null;
 };
 
+/** Capability never changes at runtime, so the store has no updates. */
+const subscribeNever = () => () => {};
+
 function getRecognition(): SpeechRecognitionLike | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as {
@@ -42,7 +45,14 @@ export function VoiceRecorder({
   onDurationChange?: (ms: number) => void;
   className?: string;
 }) {
-  const [supported, setSupported] = React.useState<boolean | null>(null);
+  // Feature detection has to run client-side only, or SSR and the client
+  // disagree. useSyncExternalStore gives us a null server snapshot and the
+  // real answer on the client without a state-setting effect.
+  const supported = React.useSyncExternalStore(
+    subscribeNever,
+    () => getRecognition() !== null,
+    () => null,
+  );
   const [recording, setRecording] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [seconds, setSeconds] = React.useState(0);
@@ -50,10 +60,6 @@ export function VoiceRecorder({
   const recRef = React.useRef<SpeechRecognitionLike | null>(null);
   const startedAt = React.useRef<number>(0);
   const baseText = React.useRef<string>("");
-
-  React.useEffect(() => {
-    setSupported(getRecognition() !== null);
-  }, []);
 
   React.useEffect(() => {
     if (!recording) return;
@@ -70,7 +76,7 @@ export function VoiceRecorder({
 
   function start() {
     const rec = getRecognition();
-    if (!rec) return setSupported(false);
+    if (!rec) return;
 
     setError(null);
     baseText.current = "";

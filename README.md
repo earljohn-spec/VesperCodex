@@ -95,8 +95,27 @@ npm run build       # production build
 npm run db:seed     # reseed demo data (idempotent)
 npm run db:reset    # delete the database
 npm run typecheck   # tsc --noEmit
+npm run lint        # eslint (flat config, ESLint 9)
 npx tsx scripts/check.ts   # print derived stats for the demo account
 ```
+
+## Checking for problems
+
+Four commands, cheapest first. All four are currently clean.
+
+```bash
+npm run typecheck   # type errors
+npm run lint        # unused vars, React rule violations, a11y
+npm run build       # catches anything only production surfaces
+npx tsx scripts/check.ts   # verifies seeded data is coherent
+```
+
+Then open DevTools (F12) → Console while clicking through the app. React
+reports duplicate keys, hydration mismatches, and invalid nesting there and
+nowhere else — a page can return 200 and still be warning in the console.
+
+Note `next lint` was removed in Next.js 16; this project uses ESLint directly
+via `eslint.config.mjs`.
 
 ## Optional: use a real LLM
 

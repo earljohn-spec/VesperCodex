@@ -39,6 +39,7 @@ import { HeatStrip } from "@/components/charts";
 import { PageHeader, StatCard } from "@/components/shared";
 import { OfflineBanner, offlineFetch } from "@/components/offline";
 import { cn, todayKey } from "@/lib/utils";
+import { useSyncedState } from "@/lib/use-synced-state";
 import type { HabitCadence, HabitWithStats } from "@/lib/types";
 import type { HabitSummary } from "@/lib/repos/habits";
 
@@ -92,7 +93,7 @@ export function HabitsView({
   const router = useRouter();
   const toast = useToast();
 
-  const [items, setItems] = React.useState(habits);
+  const [items, setItems] = useSyncedState(habits);
   const [tab, setTab] = React.useState<"active" | "archived">("active");
   const [editorOpen, setEditorOpen] = React.useState(!!openNew);
   const [editing, setEditing] = React.useState<HabitWithStats | null>(null);
@@ -101,7 +102,6 @@ export function HabitsView({
   const [deleting, setDeleting] = React.useState<HabitWithStats | null>(null);
   const [pending, setPending] = React.useState<Set<string>>(new Set());
 
-  React.useEffect(() => setItems(habits), [habits]);
 
   const active = items.filter((h) => !h.archived);
   const archived = items.filter((h) => h.archived);

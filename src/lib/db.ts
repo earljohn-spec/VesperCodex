@@ -12,7 +12,6 @@ const DATA_DIR = process.env.VESPER_DATA_DIR ?? path.join(process.cwd(), ".data"
 const DB_PATH = process.env.VESPER_DB_PATH ?? path.join(DATA_DIR, "vesper.db");
 
 declare global {
-  // eslint-disable-next-line no-var
   var __vesperDb: DatabaseSync | undefined;
 }
 

@@ -30,6 +30,7 @@ import {
 import { PageHeader } from "@/components/shared";
 import { OfflineBanner, offlineFetch } from "@/components/offline";
 import { cn, relativeTime } from "@/lib/utils";
+import { useSyncedState } from "@/lib/use-synced-state";
 import type { Memory, MemoryKind } from "@/lib/types";
 
 const KINDS: {
@@ -82,7 +83,7 @@ export function MemoryView({ memories }: { memories: Memory[] }) {
   const router = useRouter();
   const toast = useToast();
 
-  const [items, setItems] = React.useState(memories);
+  const [items, setItems] = useSyncedState(memories);
   const [tab, setTab] = React.useState<MemoryKind | "all">("all");
   const [editorOpen, setEditorOpen] = React.useState(false);
   const [editing, setEditing] = React.useState<Memory | null>(null);
@@ -90,7 +91,6 @@ export function MemoryView({ memories }: { memories: Memory[] }) {
   const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState<Memory | null>(null);
 
-  React.useEffect(() => setItems(memories), [memories]);
 
   const shown = tab === "all" ? items : items.filter((m) => m.kind === tab);
 

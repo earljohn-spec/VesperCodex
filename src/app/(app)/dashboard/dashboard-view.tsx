@@ -25,6 +25,7 @@ import { EmotionChip, MoodDot, PageHeader, StatCard, stressTone } from "@/compon
 import { BreathingPlayer } from "@/components/breathing";
 import { OfflineBanner, offlineFetch } from "@/components/offline";
 import { cn, formatTime, greeting, relativeTime, todayKey } from "@/lib/utils";
+import { useSyncedState } from "@/lib/use-synced-state";
 import type {
   Biometric,
   HabitWithStats,
@@ -70,13 +71,11 @@ export function DashboardView({
   const toast = useToast();
   const firstName = user.name.split(" ")[0];
 
-  const [breaks, setBreaks] = React.useState(activeBreaks);
-  const [localHabits, setLocalHabits] = React.useState(habits);
+  const [breaks, setBreaks] = useSyncedState(activeBreaks);
+  const [localHabits, setLocalHabits] = useSyncedState(habits);
   const [player, setPlayer] = React.useState<Intervention | null>(null);
   const [pendingHabits, setPendingHabits] = React.useState<Set<string>>(new Set());
 
-  React.useEffect(() => setBreaks(activeBreaks), [activeBreaks]);
-  React.useEffect(() => setLocalHabits(habits), [habits]);
 
   const stress = stressTone(bio.stressNow);
   const topBreak = breaks[0];

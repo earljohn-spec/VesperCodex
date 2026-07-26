@@ -72,13 +72,16 @@ export function BreathingPlayer({
     ? pattern.phases.reduce((a, [, s]) => a + s, 0) * pattern.rounds
     : durationSec;
 
-  React.useEffect(() => {
+  // Reset the timer whenever the modal is dismissed, so reopening starts fresh.
+  const [wasOpen, setWasOpen] = React.useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (!open) {
       setRunning(false);
       setElapsed(0);
       setDone(false);
     }
-  }, [open]);
+  }
 
   React.useEffect(() => {
     if (!running) return;

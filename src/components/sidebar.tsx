@@ -45,9 +45,12 @@ export function Sidebar({
   const pathname = usePathname();
   const [open, setOpen] = React.useState(false);
 
-  React.useEffect(() => {
+  // Close the mobile drawer on navigation.
+  const [prevPath, setPrevPath] = React.useState(pathname);
+  if (pathname !== prevPath) {
+    setPrevPath(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   const nav = (
     <>

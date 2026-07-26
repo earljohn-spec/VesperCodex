@@ -36,6 +36,7 @@ import { PageHeader, StatCard, stressTone } from "@/components/shared";
 import { BreathingPlayer } from "@/components/breathing";
 import { OfflineBanner, useOffline } from "@/components/offline";
 import { cn, formatTime, relativeTime } from "@/lib/utils";
+import { useSyncedState } from "@/lib/use-synced-state";
 import type { Biometric, Device, DeviceProvider, Intervention } from "@/lib/types";
 import type { BiometricSummary } from "@/lib/repos/biometrics";
 
@@ -70,9 +71,9 @@ export function BiometricsView({
   const toast = useToast();
   const { offline } = useOffline();
 
-  const [devices, setDevices] = React.useState(initialDevices);
-  const [summary, setSummary] = React.useState(initialSummary);
-  const [samples, setSamples] = React.useState(initialSamples);
+  const [devices, setDevices] = useSyncedState(initialDevices);
+  const [summary, setSummary] = useSyncedState(initialSummary);
+  const [samples, setSamples] = useSyncedState(initialSamples);
   const [syncing, setSyncing] = React.useState(false);
   const [addOpen, setAddOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState<Device | null>(null);
@@ -82,9 +83,6 @@ export function BiometricsView({
     displayName: "",
   });
 
-  React.useEffect(() => setDevices(initialDevices), [initialDevices]);
-  React.useEffect(() => setSummary(initialSummary), [initialSummary]);
-  React.useEffect(() => setSamples(initialSamples), [initialSamples]);
 
   const stress = stressTone(summary.stressNow);
 

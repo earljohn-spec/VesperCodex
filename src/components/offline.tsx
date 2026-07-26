@@ -121,8 +121,11 @@ export function useOffline() {
     return { ok, failed: remaining.length };
   }, [offline]);
 
-  // auto-flush when we come back online
+  // Auto-flush the outbox when connectivity returns. This is a genuine
+  // external-system sync (network + localStorage), which is exactly what
+  // effects are for; `flush` sets `syncing` as a side effect of that work.
   React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!offline && queue.length) void flush();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offline]);

@@ -29,6 +29,7 @@ import { PageHeader, StatCard, stressTone } from "@/components/shared";
 import { BreathingPlayer } from "@/components/breathing";
 import { OfflineBanner, offlineFetch } from "@/components/offline";
 import { cn, formatDuration, relativeTime, titleCase } from "@/lib/utils";
+import { useSyncedState } from "@/lib/use-synced-state";
 import type { Intervention, InterventionKind } from "@/lib/types";
 import type { InterventionSummary } from "@/lib/repos/interventions";
 
@@ -64,12 +65,11 @@ export function BreaksView({
   const router = useRouter();
   const toast = useToast();
 
-  const [items, setItems] = React.useState(interventions);
+  const [items, setItems] = useSyncedState(interventions);
   const [tab, setTab] = React.useState<Tab>("active");
   const [player, setPlayer] = React.useState<Intervention | null>(null);
   const [deleting, setDeleting] = React.useState<Intervention | null>(null);
 
-  React.useEffect(() => setItems(interventions), [interventions]);
 
   const active = items.filter((i) => i.status === "suggested" || i.status === "snoozed");
   const completed = items.filter((i) => i.status === "completed");
@@ -110,8 +110,10 @@ export function BreaksView({
     if (!item) return;
 
     // Show the player immediately; persist in the background.
+    // crypto.randomUUID keeps the temp id unique without an impure Date.now()
+    // read during render.
     const optimistic: Intervention = {
-      id: `tmp_${Date.now()}`,
+      id: `tmp_${crypto.randomUUID()}`,
       userId: "",
       biometricId: null,
       kind,
