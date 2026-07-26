@@ -29,7 +29,8 @@ import {
 } from "@/components/ui";
 import { PageHeader } from "@/components/shared";
 import { OfflineBanner, offlineFetch } from "@/components/offline";
-import { cn, relativeTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { RelativeTime } from "@/components/local-time";
 import { useSyncedState } from "@/lib/use-synced-state";
 import type { Memory, MemoryKind } from "@/lib/types";
 
@@ -90,7 +91,6 @@ export function MemoryView({ memories }: { memories: Memory[] }) {
   const [draft, setDraft] = React.useState(BLANK);
   const [saving, setSaving] = React.useState(false);
   const [deleting, setDeleting] = React.useState<Memory | null>(null);
-
 
   const shown = tab === "all" ? items : items.filter((m) => m.kind === tab);
 
@@ -258,7 +258,7 @@ export function MemoryView({ memories }: { memories: Memory[] }) {
                               />
                             </span>
                             <span className="text-[10px] text-ink-600">
-                              last referenced {relativeTime(m.lastSeenAt)}
+                              last referenced <RelativeTime value={m.lastSeenAt} />
                             </span>
                           </div>
                         </div>

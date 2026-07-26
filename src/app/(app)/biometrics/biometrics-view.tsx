@@ -35,7 +35,8 @@ import { LineChart, RadialGauge } from "@/components/charts";
 import { PageHeader, StatCard, stressTone } from "@/components/shared";
 import { BreathingPlayer } from "@/components/breathing";
 import { OfflineBanner, useOffline } from "@/components/offline";
-import { cn, formatTime, relativeTime } from "@/lib/utils";
+import { cn } from "@/lib/utils";
+import { LocalNumber, LocalTime, RelativeTime } from "@/components/local-time";
 import { useSyncedState } from "@/lib/use-synced-state";
 import type { Biometric, Device, DeviceProvider, Intervention } from "@/lib/types";
 import type { BiometricSummary } from "@/lib/repos/biometrics";
@@ -82,7 +83,6 @@ export function BiometricsView({
     provider: "apple_watch",
     displayName: "",
   });
-
 
   const stress = stressTone(summary.stressNow);
 
@@ -233,7 +233,7 @@ export function BiometricsView({
         />
         <StatCard
           label="Steps today"
-          value={summary.stepsToday.toLocaleString()}
+          value={<LocalNumber value={summary.stepsToday} />}
           icon={Footprints}
           tone="sky"
           footer={
@@ -300,7 +300,13 @@ export function BiometricsView({
             <span>Peak stress {summary.peakStress24}/100</span>
             <span>24h average {summary.stressAvg24}/100</span>
             <span className="ml-auto">
-              {summary.lastSyncAt ? `Last sample ${relativeTime(summary.lastSyncAt)}` : "No data"}
+              {summary.lastSyncAt ? (
+                <>
+                  Last sample <RelativeTime value={summary.lastSyncAt} />
+                </>
+              ) : (
+                "No data"
+              )}
             </span>
           </div>
         </Card>
@@ -416,7 +422,7 @@ export function BiometricsView({
                             {device.battery}%
                           </span>
                         )}
-                        {device.lastSyncAt && <span>synced {relativeTime(device.lastSyncAt)}</span>}
+                        {device.lastSyncAt && <span>synced <RelativeTime value={device.lastSyncAt} /></span>}
                       </p>
                     </div>
                     <div className="flex shrink-0 gap-0.5">
@@ -481,7 +487,7 @@ export function BiometricsView({
                       {s.triggerNote}
                     </p>
                     <p className="mt-1 text-[10px] text-ink-600">
-                      {relativeTime(s.triggeredAt)} · {formatTime(s.triggeredAt)}
+                      <RelativeTime value={s.triggeredAt} /> · <LocalTime value={s.triggeredAt} />
                     </p>
                   </li>
                 ))}

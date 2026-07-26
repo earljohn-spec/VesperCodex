@@ -34,6 +34,7 @@ import { EmotionChip, MoodDot, PageHeader, StatCard } from "@/components/shared"
 import { VoiceRecorder } from "@/components/voice-recorder";
 import { OfflineBanner, offlineFetch, useOffline } from "@/components/offline";
 import { cn, formatDate, formatTime, relativeTime } from "@/lib/utils";
+import { LocalTime } from "@/components/local-time";
 import { EMOTION_TAGS, type EmotionTag, type JournalEntry } from "@/lib/types";
 import { useSyncedState } from "@/lib/use-synced-state";
 import type { JournalStats } from "@/lib/repos/journal";
@@ -503,7 +504,7 @@ export function JournalView({ entries, stats, trend, emotions, openNew, focusEnt
                             </p>
                             <div className="mt-2 flex flex-wrap items-center gap-1.5">
                               <span className="text-[11px] text-ink-500">
-                                {formatTime(entry.entryDate)} · energy {entry.energyScore}/10
+                                <LocalTime value={entry.entryDate} /> · energy {entry.energyScore}/10
                               </span>
                               {entry.emotions.slice(0, 4).map((em) => (
                                 <EmotionChip key={em} emotion={em} size="sm" />
@@ -664,6 +665,9 @@ export function JournalView({ entries, stats, trend, emotions, openNew, focusEnt
         onClose={() => setViewing(null)}
         title={viewing?.title || "Journal entry"}
         description={
+          // Modal's description is string-typed so this can't use <LocalTime>.
+          // The viewer only opens on click — after hydration — so formatting
+          // in the local zone here can't cause a mismatch.
           viewing
             ? `${formatDate(viewing.entryDate, { weekday: "long", month: "long", day: "numeric" })} at ${formatTime(viewing.entryDate)} · ${relativeTime(viewing.entryDate)}`
             : undefined

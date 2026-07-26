@@ -28,7 +28,8 @@ import {
 import { RichText } from "@/components/shared";
 import { BreathingPlayer } from "@/components/breathing";
 import { OfflineBanner, useOffline } from "@/components/offline";
-import { cn, initials, relativeTime } from "@/lib/utils";
+import { cn, initials } from "@/lib/utils";
+import { RelativeTime } from "@/components/local-time";
 import { useSyncedState } from "@/lib/use-synced-state";
 import type { Conversation, Intervention, Message, User } from "@/lib/types";
 
@@ -345,7 +346,7 @@ export function ChatView({
                       {c.lastMessage || c.summary || "No messages yet"}
                     </p>
                     <p className="mt-1 text-[10px] text-ink-600">
-                      {relativeTime(c.updatedAt)} · {c.messageCount ?? 0} messages
+                      <RelativeTime value={c.updatedAt} /> · {c.messageCount ?? 0} messages
                     </p>
                   </button>
                 )}
@@ -501,7 +502,7 @@ export function ChatView({
                           m.role === "user" && "justify-end",
                         )}
                       >
-                        <span className="text-[10px] text-ink-600">{relativeTime(m.createdAt)}</span>
+                        <span className="text-[10px] text-ink-600"><RelativeTime value={m.createdAt} /></span>
                         {m.strategy && (
                           <Badge tone="violet">
                             <Wind className="h-2.5 w-2.5" />

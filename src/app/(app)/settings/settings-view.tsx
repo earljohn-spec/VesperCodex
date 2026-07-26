@@ -17,7 +17,8 @@ import { Badge, Button, Card, CardHeader, useToast } from "@/components/ui";
 import { PageHeader } from "@/components/shared";
 import { useOffline } from "@/components/offline";
 import { logoutAction } from "@/lib/actions/auth";
-import { cn, formatDate, initials, relativeTime } from "@/lib/utils";
+import { cn, formatDate, initials } from "@/lib/utils";
+import { RelativeTime } from "@/components/local-time";
 import type { User } from "@/lib/types";
 
 function Toggle({
@@ -183,7 +184,7 @@ export function SettingsView({
                   className="flex items-center justify-between rounded-lg border border-ink-800 bg-ink-900/30 px-3 py-2 text-[11px]"
                 >
                   <span className="text-ink-300">{q.label}</span>
-                  <span className="text-ink-600">{relativeTime(q.createdAt)}</span>
+                  <span className="text-ink-600"><RelativeTime value={q.createdAt} /></span>
                 </li>
               ))}
             </ul>
@@ -228,7 +229,7 @@ export function SettingsView({
                     >
                       {e.status}
                     </Badge>
-                    <span className="text-[10px] text-ink-600">{relativeTime(e.createdAt)}</span>
+                    <span className="text-[10px] text-ink-600"><RelativeTime value={e.createdAt} /></span>
                   </span>
                 </li>
               ))}

@@ -24,7 +24,8 @@ import { LineChart, RadialGauge, Sparkline } from "@/components/charts";
 import { EmotionChip, MoodDot, PageHeader, StatCard, stressTone } from "@/components/shared";
 import { BreathingPlayer } from "@/components/breathing";
 import { OfflineBanner, offlineFetch } from "@/components/offline";
-import { cn, formatTime, greeting, relativeTime, todayKey } from "@/lib/utils";
+import { cn, greeting, todayKey } from "@/lib/utils";
+import { LocalTime, RelativeTime } from "@/components/local-time";
 import { useSyncedState } from "@/lib/use-synced-state";
 import type {
   Biometric,
@@ -75,7 +76,6 @@ export function DashboardView({
   const [localHabits, setLocalHabits] = useSyncedState(habits);
   const [player, setPlayer] = React.useState<Intervention | null>(null);
   const [pendingHabits, setPendingHabits] = React.useState<Set<string>>(new Set());
-
 
   const stress = stressTone(bio.stressNow);
   const topBreak = breaks[0];
@@ -221,7 +221,7 @@ export function DashboardView({
               </div>
               <p className="mt-1 text-xs leading-relaxed text-ink-300">{topBreak.detail}</p>
               <p className="mt-1.5 text-[11px] text-amber-300/80">
-                {topBreak.triggerNote} · {relativeTime(topBreak.triggeredAt)}
+                {topBreak.triggerNote} · <RelativeTime value={topBreak.triggeredAt} />
               </p>
             </div>
             <div className="flex shrink-0 gap-2">
@@ -268,7 +268,13 @@ export function DashboardView({
             <span className="flex items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: stress.color }} />
               {stress.label} ·{" "}
-              {bio.lastSyncAt ? `synced ${relativeTime(bio.lastSyncAt)}` : "no data"}
+              {bio.lastSyncAt ? (
+                <>
+                  synced <RelativeTime value={bio.lastSyncAt} />
+                </>
+              ) : (
+                "no data"
+              )}
             </span>
           }
         />
@@ -617,7 +623,7 @@ export function DashboardView({
                         </p>
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                           <span className="text-[11px] text-ink-500">
-                            {relativeTime(entry.entryDate)} · {formatTime(entry.entryDate)}
+                            <RelativeTime value={entry.entryDate} /> · <LocalTime value={entry.entryDate} />
                           </span>
                           {entry.emotions.slice(0, 3).map((em) => (
                             <EmotionChip key={em} emotion={em} size="sm" />

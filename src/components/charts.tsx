@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useMounted } from "./local-time";
 
 /* Lightweight, dependency-free SVG charts tuned for the Vesper palette. */
 
@@ -40,13 +41,24 @@ function labelFor(raw: string, mode: AxisMode, long = false): string {
   );
 }
 
+/** Round to 3dp — sub-pixel precision is invisible, and fixed decimals keep
+ *  the emitted path string byte-identical between server and client. */
+function r3(n: number) {
+  return Math.round(n * 1000) / 1000;
+}
+
 function buildPath(points: { x: number; y: number }[], smoothing = 0.18) {
   if (points.length < 2) return "";
-  const line = (a: { x: number; y: number }, b: { x: number; y: number }) => {
-    const dx = b.x - a.x;
-    const dy = b.y - a.y;
-    return { length: Math.hypot(dx, dy), angle: Math.atan2(dy, dx) };
-  };
+
+  // Control points are offset along the vector between a point's neighbours.
+  //
+  // This deliberately avoids trigonometry. The obvious formulation —
+  // cos(atan2(dy,dx)) * hypot(dx,dy) — is algebraically just `dx`, but
+  // Math.cos/sin/atan2/hypot are "implementation-approximated" in ECMA-262,
+  // so Node's V8 and the browser's V8 may disagree by one ULP. That produced
+  // path strings like `2.666666666666666` on the server versus
+  // `2.6666666666666665` on the client and tripped React's hydration check.
+  // Plain +, -, * are IEEE-754 exact, so they're identical everywhere.
   const controlPoint = (
     cur: { x: number; y: number },
     prev: { x: number; y: number } | undefined,
@@ -55,16 +67,15 @@ function buildPath(points: { x: number; y: number }[], smoothing = 0.18) {
   ) => {
     const p = prev ?? cur;
     const n = next ?? cur;
-    const o = line(p, n);
-    const angle = o.angle + (reverse ? Math.PI : 0);
-    const length = o.length * smoothing;
-    return { x: cur.x + Math.cos(angle) * length, y: cur.y + Math.sin(angle) * length };
+    const sign = reverse ? -smoothing : smoothing;
+    return { x: cur.x + (n.x - p.x) * sign, y: cur.y + (n.y - p.y) * sign };
   };
+
   return points.reduce((acc, point, i, a) => {
-    if (i === 0) return `M ${point.x},${point.y}`;
+    if (i === 0) return `M ${r3(point.x)},${r3(point.y)}`;
     const cps = controlPoint(a[i - 1], a[i - 2], point);
     const cpe = controlPoint(point, a[i - 1], a[i + 1], true);
-    return `${acc} C ${cps.x},${cps.y} ${cpe.x},${cpe.y} ${point.x},${point.y}`;
+    return `${acc} C ${r3(cps.x)},${r3(cps.y)} ${r3(cpe.x)},${r3(cpe.y)} ${r3(point.x)},${r3(point.y)}`;
   }, "");
 }
 
@@ -97,6 +108,9 @@ export function LineChart({
   const [hover, setHover] = React.useState<number | null>(null);
   const wrapRef = React.useRef<HTMLDivElement>(null);
   const [width, setWidth] = React.useState(600);
+  // Axis labels use the viewer's locale/timezone, which the server can't know.
+  // Hold them back until mount so SSR and hydration agree.
+  const mounted = useMounted();
 
   React.useEffect(() => {
     const el = wrapRef.current;
@@ -218,12 +232,13 @@ export function LineChart({
             // so `p.date` is not a unique identity.
             <text
               key={`tick-${i}`}
+              suppressHydrationWarning
               x={xFor(i)}
               y={height - 5}
               textAnchor="middle"
               className="fill-ink-500 text-[9px]"
             >
-              {labelFor(p.date, axis)}
+              {mounted ? labelFor(p.date, axis) : ""}
             </text>
           ) : null,
         )}

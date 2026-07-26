@@ -28,7 +28,8 @@ import {
 import { PageHeader, StatCard, stressTone } from "@/components/shared";
 import { BreathingPlayer } from "@/components/breathing";
 import { OfflineBanner, offlineFetch } from "@/components/offline";
-import { cn, formatDuration, relativeTime, titleCase } from "@/lib/utils";
+import { cn, formatDuration, titleCase } from "@/lib/utils";
+import { RelativeTime } from "@/components/local-time";
 import { useSyncedState } from "@/lib/use-synced-state";
 import type { Intervention, InterventionKind } from "@/lib/types";
 import type { InterventionSummary } from "@/lib/repos/interventions";
@@ -69,7 +70,6 @@ export function BreaksView({
   const [tab, setTab] = React.useState<Tab>("active");
   const [player, setPlayer] = React.useState<Intervention | null>(null);
   const [deleting, setDeleting] = React.useState<Intervention | null>(null);
-
 
   const active = items.filter((i) => i.status === "suggested" || i.status === "snoozed");
   const completed = items.filter((i) => i.status === "completed");
@@ -331,7 +331,7 @@ export function BreaksView({
                         {item.detail}
                       </p>
                       <p className="mt-1 text-[11px] text-ink-600">
-                        {item.triggerNote} · {relativeTime(item.triggeredAt)}
+                        {item.triggerNote} · <RelativeTime value={item.triggeredAt} />
                       </p>
                     </div>
 
