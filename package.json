@@ -4,9 +4,10 @@
   "private": true,
   "description": "Vesper — an AI-powered personal wellness & mental health companion",
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "npm run db:ensure && next dev --port 3000",
     "build": "next build",
-    "start": "next start --port 3000",
+    "start": "npm run db:ensure && next start --port 3000",
+    "db:ensure": "tsx scripts/ensure-seed.ts",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "db:seed": "tsx scripts/seed.ts",
