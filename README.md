@@ -96,6 +96,7 @@ npm run db:seed     # reseed demo data (idempotent)
 npm run db:reset    # delete the database
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint (flat config, ESLint 9)
+npm run test        # security tests: rate limiting, reset, deletion
 npx tsx scripts/check.ts   # print derived stats for the demo account
 ```
 
@@ -106,6 +107,7 @@ Four commands, cheapest first. All four are currently clean.
 ```bash
 npm run typecheck   # type errors
 npm run lint        # unused vars, React rule violations, a11y
+npm run test        # 24 assertions on auth/rate-limit/deletion
 npm run build       # catches anything only production surfaces
 npx tsx scripts/check.ts   # verifies seeded data is coherent
 ```
@@ -183,10 +185,19 @@ out of scope for a demo build. Read this before deploying it for real users.
 - Point `VESPER_DB_PATH` at a persistent volume. SQLite on an ephemeral
   filesystem (Vercel, Heroku) loses every write on redeploy.
 
-**Not implemented**
-- Password reset, email verification, account deletion / data export
-- Rate limiting on auth and API routes
-- Automated tests and CI
+**Implemented**
+- Password reset — hashed single-use tokens, 1-hour expiry, revokes all
+  sessions on use. No mail provider is wired up: the link is printed to the
+  server console and shown in the UI outside production.
+- Rate limiting — per-IP and per-account on login, plus signup, reset and
+  chat. Fixed-window counters in SQLite, so they survive restarts.
+- Account deletion and JSON export (GDPR erasure and portability).
+- Security tests covering all of the above (`npm run test`).
+
+**Still not implemented**
+- Email delivery (swap `deliverResetEmail` for Resend/SES/Postmark)
+- Email verification on signup
+- CI pipeline
 - Real wearable APIs — biometrics are simulated locally
 - Multi-device sync conflict resolution beyond last-write-wins
 

@@ -26,17 +26,39 @@ export default async function SettingsPage() {
     [user.id],
   );
 
+  const stats = journalStats(user.id);
   const counts = {
-    entries: journalStats(user.id).total,
+    entries: stats.total,
     memories: listMemories(user.id).length,
     devices: listDevices(user.id).length,
-    pending: journalStats(user.id).pendingSync,
+    pending: stats.pendingSync,
   };
+
+  // Row counts for the export panel's summary.
+  const exportCounts = Object.fromEntries(
+    (
+      [
+        "journal_entries",
+        "habits",
+        "habit_logs",
+        "conversations",
+        "messages",
+        "memories",
+        "devices",
+        "biometrics",
+        "interventions",
+      ] as const
+    ).map((table) => [
+      table,
+      query<{ c: number }>(`SELECT COUNT(*) c FROM ${table} WHERE user_id = ?`, [user.id])[0]?.c ?? 0,
+    ]),
+  ) as Record<string, number>;
 
   return (
     <SettingsView
       user={user}
       counts={counts}
+      exportCounts={exportCounts}
       syncEvents={syncEvents.map((s) => ({
         id: s.id,
         resource: s.resource,

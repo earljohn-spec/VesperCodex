@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { AlertCircle, ArrowRight, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { AlertCircle, ArrowRight, CheckCircle2, Sparkles } from "lucide-react";
 import { Button, Input, Label } from "@/components/ui";
 import { demoLoginAction, loginAction, type AuthState } from "@/lib/actions/auth";
 
@@ -26,11 +27,21 @@ function DemoButton() {
   );
 }
 
-export function LoginForm() {
+export function LoginForm({ notice }: { notice?: string }) {
   const [state, formAction] = useActionState<AuthState, FormData>(loginAction, {});
 
   return (
     <div className="mt-8 space-y-5">
+      {notice && (
+        <div
+          role="status"
+          className="flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-3 text-sm text-emerald-100"
+        >
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{notice}</span>
+        </div>
+      )}
+
       <form action={formAction} className="space-y-4" noValidate>
         {state.error && (
           <div
@@ -59,7 +70,15 @@ export function LoginForm() {
         </div>
 
         <div>
-          <Label htmlFor="password">Password</Label>
+          <div className="flex items-baseline justify-between">
+            <Label htmlFor="password">Password</Label>
+            <Link
+              href="/forgot-password"
+              className="mb-1.5 text-xs font-medium text-vesper-300 hover:text-vesper-200 focus-ring rounded"
+            >
+              Forgot?
+            </Link>
+          </div>
           <Input
             id="password"
             name="password"

@@ -17,6 +17,11 @@ import { Badge, Button, Card, CardHeader, useToast } from "@/components/ui";
 import { PageHeader } from "@/components/shared";
 import { useOffline } from "@/components/offline";
 import { logoutAction } from "@/lib/actions/auth";
+import {
+  ChangePasswordPanel,
+  DeleteAccountPanel,
+  ExportPanel,
+} from "@/components/account-panels";
 import { cn, formatDate, initials } from "@/lib/utils";
 import { RelativeTime } from "@/components/local-time";
 import type { User } from "@/lib/types";
@@ -54,10 +59,12 @@ function Toggle({
 export function SettingsView({
   user,
   counts,
+  exportCounts,
   syncEvents,
 }: {
   user: User;
   counts: { entries: number; memories: number; devices: number; pending: number };
+  exportCounts: Record<string, number>;
   syncEvents: { id: string; resource: string; action: string; status: string; createdAt: string }[];
 }) {
   const toast = useToast();
@@ -192,6 +199,10 @@ export function SettingsView({
         </div>
       </Card>
 
+      <ChangePasswordPanel />
+
+      <ExportPanel counts={exportCounts} />
+
       {/* --------------------------------- data --------------------------------- */}
       <Card className="mb-5">
         <CardHeader title="Your data" subtitle="Stored locally in your own database" icon={Database} />
@@ -237,6 +248,8 @@ export function SettingsView({
           </div>
         )}
       </Card>
+
+      <DeleteAccountPanel />
 
       {/* -------------------------------- safety -------------------------------- */}
       <Card className="mb-5 border-rose-500/20">

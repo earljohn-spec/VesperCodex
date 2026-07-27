@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fail, ok, parseBody, withUser } from "@/lib/api";
+import { enforceLimit, fail, ok, parseBody, withUser } from "@/lib/api";
 import {
   addMessage,
   getConversation,
@@ -26,6 +26,10 @@ export const GET = withUser(async (user, _req: Request, ctx: Ctx) => {
 });
 
 export const POST = withUser(async (user, req: Request, ctx: Ctx) => {
+  // The companion is the costliest thing we expose — cap it per user.
+  const limited = enforceLimit("chat", user.id);
+  if (limited) return limited;
+
   const { id } = await ctx.params;
   const conversation = getConversation(user.id, id);
   if (!conversation) return fail("Conversation not found", 404);

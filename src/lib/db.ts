@@ -61,6 +61,25 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions(user_id);
 
+-- Password reset ---------------------------------------------------------
+-- Only the SHA-256 of the token is stored, so a database leak doesn't hand
+-- an attacker working reset links.
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  token_hash    TEXT PRIMARY KEY,
+  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at    TEXT NOT NULL,
+  used_at       TEXT,
+  created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_reset_user ON password_reset_tokens(user_id);
+
+-- Rate limiting (fixed window) -------------------------------------------
+CREATE TABLE IF NOT EXISTS rate_limits (
+  key           TEXT PRIMARY KEY,
+  count         INTEGER NOT NULL DEFAULT 0,
+  window_start  TEXT NOT NULL
+);
+
 -- Mood / journal entries -------------------------------------------------
 CREATE TABLE IF NOT EXISTS journal_entries (
   id            TEXT PRIMARY KEY,
@@ -208,8 +227,23 @@ CREATE TABLE IF NOT EXISTS sync_events (
 CREATE INDEX IF NOT EXISTS idx_sync_user ON sync_events(user_id, status, created_at DESC);
 `;
 
+/**
+ * Columns added after the initial release. `CREATE TABLE IF NOT EXISTS` only
+ * covers new tables, so existing databases need these applied explicitly.
+ */
+const COLUMN_MIGRATIONS: { table: string; column: string; definition: string }[] = [
+  // Lets us invalidate sessions issued before a password change.
+  { table: "users", column: "password_changed_at", definition: "TEXT" },
+];
+
 function migrate(db: DatabaseSync) {
   db.exec(SCHEMA);
+
+  for (const m of COLUMN_MIGRATIONS) {
+    const cols = db.prepare(`PRAGMA table_info(${m.table})`).all() as { name: string }[];
+    if (cols.some((c) => c.name === m.column)) continue;
+    db.exec(`ALTER TABLE ${m.table} ADD COLUMN ${m.column} ${m.definition}`);
+  }
 }
 
 /* ------------------------------------------------------------------ */
