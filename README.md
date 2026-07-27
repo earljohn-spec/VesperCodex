@@ -117,6 +117,7 @@ npm run typecheck   # tsc --noEmit
 npm run lint        # eslint (flat config, ESLint 9)
 npm run test        # security tests: rate limiting, reset, deletion
 npm run test:pg     # Postgres schema + query compatibility (via PGlite)
+npm run test:mail   # email templates + real SMTP delivery
 npx tsx scripts/check.ts   # print derived stats for the demo account
 ```
 
@@ -214,8 +215,26 @@ out of scope for a demo build. Read this before deploying it for real users.
 - Account deletion and JSON export (GDPR erasure and portability).
 - Security tests covering all of the above (`npm run test`).
 
+### Email
+
+Password-reset links are delivered by `src/lib/mail.ts`, which picks a
+transport from the environment:
+
+| Config | Transport |
+|---|---|
+| `SMTP_URL` | SMTP — Resend, SES, Postmark, Mailgun, anything |
+| `RESEND_API_KEY` | Resend's HTTP API, for hosts that block SMTP ports |
+| neither | Console — logs the link, so local dev needs no setup |
+
+The link is only ever returned to the UI on the console transport, so a
+configured deployment can't leak it. Delivery failures are logged but never
+surfaced during password reset — saying "we couldn't send to that address"
+would reveal whether the address is registered.
+
+`npm run test:mail` boots a throwaway SMTP server and asserts on the message
+pulled back off the wire, so delivery is verified rather than mocked.
+
 **Still not implemented**
-- Email delivery (swap `deliverResetEmail` for Resend/SES/Postmark)
 - Email verification on signup
 - Real wearable APIs — biometrics are simulated locally
 

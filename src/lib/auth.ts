@@ -193,6 +193,10 @@ export class AuthError extends Error {
 
 /* ------------------------------- accounts ------------------------------ */
 
+export async function findUserById(id: string) {
+  return queryOne<DbUserRow>(`SELECT * FROM users WHERE id = ?`, [id]);
+}
+
 export async function findUserByEmail(email: string) {
   return await queryOne<DbUserRow>(`SELECT * FROM users WHERE email = ?`, [email.toLowerCase().trim()]);
 }

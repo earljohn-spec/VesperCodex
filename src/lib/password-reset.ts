@@ -2,6 +2,7 @@ import "server-only";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { execute, nowIso, queryOne } from "./db";
 import { hashPassword } from "./auth";
+import { sendMail, passwordResetTemplate, passwordChangedTemplate } from "./mail";
 
 /**
  * Password reset tokens.
@@ -106,27 +107,27 @@ export async function pruneResetTokens() {
 /**
  * Delivers the reset link.
  *
- * No mail provider is wired up, so in development the link is logged to the
- * server console — which is enough to exercise the whole flow end to end.
- * Swap the body of this function for Resend/SES/Postmark in production.
+ * Returns the link only when no real transport is configured, so a dev
+ * instance can surface it in the UI without a mail provider. In production
+ * with SMTP or Resend set up, the link never leaves the email.
  */
 export async function deliverResetEmail(email: string, token: string, origin: string) {
   const link = `${origin}/reset-password?token=${token}`;
+  const tpl = passwordResetTemplate(link, TOKEN_TTL_MIN);
+  const result = await sendMail({ ...tpl, to: email }, link);
 
-  if (process.env.VESPER_SMTP_URL || process.env.VESPER_MAIL_API_KEY) {
-    // Placeholder for a real provider integration.
-    console.warn("[vesper] mail provider configured but not implemented; logging link instead");
-  }
+  return {
+    delivered: result.ok,
+    transport: result.transport,
+    /** Only populated by the console transport. */
+    link: result.preview,
+  };
+}
 
-  console.info(
-    `\n──────────────────────────────────────────────────────────────\n` +
-      `  Password reset requested for ${email}\n` +
-      `  ${link}\n` +
-      `  (expires in ${TOKEN_TTL_MIN} minutes)\n` +
-      `──────────────────────────────────────────────────────────────\n`,
-  );
-
-  return { delivered: true as const, link };
+/** Courtesy notice after a completed reset. Failure here is not user-facing. */
+export async function notifyPasswordChanged(email: string) {
+  const tpl = passwordChangedTemplate();
+  await sendMail({ ...tpl, to: email });
 }
 
 export const RESET_TOKEN_TTL_MIN = TOKEN_TTL_MIN;

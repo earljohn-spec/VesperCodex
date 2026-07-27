@@ -8,6 +8,7 @@ import {
   createUser,
   destroySession,
   findUserByEmail,
+  findUserById,
   verifyPassword,
 } from "@/lib/auth";
 import { seedStarterContent } from "@/lib/starter";
@@ -16,6 +17,7 @@ import {
   completeReset,
   deliverResetEmail,
   issueResetToken,
+  notifyPasswordChanged,
   verifyResetToken,
 } from "@/lib/password-reset";
 
@@ -153,9 +155,11 @@ export async function requestPasswordResetAction(
   const { token } = await issueResetToken(row.id);
   const { link } = await deliverResetEmail(email, token, await origin());
 
-  // Surfaced in the UI only outside production, so the flow is testable
-  // without a mail provider.
-  return process.env.NODE_ENV === "production" ? generic : { ...generic, devLink: link };
+  // `link` is only returned by the console transport. When SMTP or Resend is
+  // configured it's undefined, so a real deployment can never leak it — and
+  // we belt-and-brace that with the production check.
+  const leakSafe = link && process.env.NODE_ENV !== "production";
+  return leakSafe ? { ...generic, devLink: link } : generic;
 }
 
 const confirmSchema = z
@@ -197,6 +201,11 @@ export async function confirmPasswordResetAction(
           : "That reset link isn't valid. Request a new one.";
     return { error: message };
   }
+
+  // Courtesy heads-up that the password changed. Best-effort; a mail failure
+  // must not block the user from signing in with their new password.
+  const changed = await findUserById(outcome.userId);
+  if (changed) void notifyPasswordChanged(changed.email);
 
   redirect("/login?reset=1");
 }
