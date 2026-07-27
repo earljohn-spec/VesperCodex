@@ -197,8 +197,11 @@ out of scope for a demo build. Read this before deploying it for real users.
 **Still not implemented**
 - Email delivery (swap `deliverResetEmail` for Resend/SES/Postmark)
 - Email verification on signup
-- CI pipeline
 - Real wearable APIs — biometrics are simulated locally
+
+A ready-to-use CI pipeline lives at `docs/ci.yml.example`. Copy it to
+`.github/workflows/ci.yml` to enable it — it runs typecheck, lint, the
+security tests, a build, and a production dependency audit on every push.
 - Multi-device sync conflict resolution beyond last-write-wins
 
 **If you handle real users' mental-health data**, note that this content is
