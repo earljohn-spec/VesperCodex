@@ -117,6 +117,24 @@ nowhere else — a page can return 200 and still be warning in the console.
 Note `next lint` was removed in Next.js 16; this project uses ESLint directly
 via `eslint.config.mjs`.
 
+### If `git pull` says "local changes would be overwritten"
+
+Almost always `package-lock.json`, which npm rewrites on install. It's a
+generated file, so discarding your copy is safe:
+
+```bash
+git checkout -- package-lock.json
+git pull
+npm install
+```
+
+Prefer `npm ci` over `npm install` when you just want to sync dependencies —
+it installs strictly from the lockfile and never modifies it, so this can't
+happen in the first place.
+
+If Git names a **source** file you actually edited, stash instead:
+`git stash` → `git pull` → `git stash pop`.
+
 ### About `npm audit`
 
 `npm audit` reports advisories in ESLint's own transitive dependencies

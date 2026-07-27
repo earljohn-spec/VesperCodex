@@ -1,0 +1,27 @@
+# Normalise line endings so the repo behaves identically on Windows, macOS
+# and Linux.
+#
+# Without this, Git for Windows' default `core.autocrlf=true` rewrites
+# checked-out files to CRLF. Generated files like package-lock.json then show
+# as permanently "modified" against the LF copy in the repo, which makes
+# `git pull` abort with "Your local changes would be overwritten by merge".
+
+* text=auto eol=lf
+
+# Lockfiles and configs are tool-generated — never let Git rewrite them.
+package-lock.json  text eol=lf
+*.json             text eol=lf
+*.md               text eol=lf
+*.ts               text eol=lf
+*.tsx              text eol=lf
+*.css              text eol=lf
+*.mjs              text eol=lf
+
+# Binary assets
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.db   binary
