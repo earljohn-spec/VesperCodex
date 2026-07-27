@@ -117,6 +117,22 @@ nowhere else — a page can return 200 and still be warning in the console.
 Note `next lint` was removed in Next.js 16; this project uses ESLint directly
 via `eslint.config.mjs`.
 
+### About `npm audit`
+
+`npm audit` reports advisories in ESLint's own transitive dependencies
+(`brace-expansion` via an old `minimatch`). Those are **dev-only** — they never
+ship in a build. Production dependencies are clean:
+
+```bash
+npm audit --omit=dev   # found 0 vulnerabilities
+```
+
+Do **not** run `npm audit fix --force` here: npm's suggested "fix" for the
+`postcss`/`sharp` advisories is to downgrade Next.js to 9.3.3, which would
+break the app. Those two are instead pinned to patched versions via
+`overrides` in package.json.
+
+
 ## Optional: use a real LLM
 
 Vesper runs fully offline by default with a local reply composer — that's what makes the demo work
