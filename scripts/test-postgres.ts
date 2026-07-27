@@ -37,7 +37,28 @@ async function main() {
   const tables = await q<{ table_name: string }>(
     `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name`,
   );
-  t("all tables created", tables.length === 14, `(${tables.length})`);
+  // Assert on the actual names rather than a count, so adding a table doesn't
+  // fail the suite for the wrong reason.
+  const expected = [
+    "biometrics",
+    "conversations",
+    "devices",
+    "email_verification_tokens",
+    "habit_logs",
+    "habits",
+    "interventions",
+    "journal_entries",
+    "memories",
+    "messages",
+    "password_reset_tokens",
+    "rate_limits",
+    "sessions",
+    "sync_events",
+    "users",
+  ];
+  const got = tables.map((r) => r.table_name);
+  const missing = expected.filter((n) => !got.includes(n));
+  t("all tables created", missing.length === 0, missing.length ? `missing: ${missing}` : `(${got.length})`);
   t("migration column applied", !!(await one(
     `SELECT column_name FROM information_schema.columns
      WHERE table_name='users' AND column_name='password_changed_at'`,

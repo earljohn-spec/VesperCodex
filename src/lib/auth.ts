@@ -84,6 +84,7 @@ interface DbUserRow {
   timezone: string;
   focus_areas: string;
   onboarded: number;
+  email_verified_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -96,7 +97,8 @@ export function mapUser(row: DbUserRow): User {
     avatarHue: row.avatar_hue,
     timezone: row.timezone,
     focusAreas: parseJson<string[]>(row.focus_areas, []),
-    onboarded: row.onboarded === 1,
+    onboarded: row.onboarded === 1 || (row.onboarded as unknown) === true,
+    emailVerifiedAt: row.email_verified_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

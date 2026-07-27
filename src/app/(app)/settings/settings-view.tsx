@@ -20,6 +20,7 @@ import { logoutAction } from "@/lib/actions/auth";
 import {
   ChangePasswordPanel,
   DeleteAccountPanel,
+  EmailVerificationPanel,
   ExportPanel,
 } from "@/components/account-panels";
 import { cn, formatDate, initials } from "@/lib/utils";
@@ -198,6 +199,8 @@ export function SettingsView({
           )}
         </div>
       </Card>
+
+      <EmailVerificationPanel email={user.email} verifiedAt={user.emailVerifiedAt} />
 
       <ChangePasswordPanel />
 

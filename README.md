@@ -118,6 +118,7 @@ npm run lint        # eslint (flat config, ESLint 9)
 npm run test        # security tests: rate limiting, reset, deletion
 npm run test:pg     # Postgres schema + query compatibility (via PGlite)
 npm run test:mail   # email templates + real SMTP delivery
+npm run test:verify # email verification lifecycle
 npx tsx scripts/check.ts   # print derived stats for the demo account
 ```
 
@@ -234,8 +235,18 @@ would reveal whether the address is registered.
 `npm run test:mail` boots a throwaway SMTP server and asserts on the message
 pulled back off the wire, so delivery is verified rather than mocked.
 
+### Email verification
+
+Signing up sends a confirmation link, but verification is **soft** — it nudges,
+it doesn't block. A wellbeing app shouldn't put a "check your inbox" wall in
+front of someone reaching for it at 2am, and a hard gate makes email
+deliverability a single point of failure for onboarding.
+
+What it buys us is confidence that a password reset can actually reach the
+account. Anything genuinely sensitive already requires the password. Settings
+shows the status and can resend, rate-limited to 4 per hour.
+
 **Still not implemented**
-- Email verification on signup
 - Real wearable APIs — biometrics are simulated locally
 
 A ready-to-use CI pipeline lives at `docs/ci.yml.example`. Copy it to

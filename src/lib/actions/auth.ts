@@ -9,10 +9,12 @@ import {
   destroySession,
   findUserByEmail,
   findUserById,
+  getCurrentUser,
   verifyPassword,
 } from "@/lib/auth";
 import { seedStarterContent } from "@/lib/starter";
 import { clientIp, consume, reset } from "@/lib/rate-limit";
+import { sendVerificationEmail } from "@/lib/email-verification";
 import {
   completeReset,
   deliverResetEmail,
@@ -120,6 +122,15 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
 
   const row = await createUser(parsed.data);
   await seedStarterContent(row.id, row.name);
+
+  // Best-effort: a mail outage must not stop someone signing up. Verification
+  // is soft, so an unsent email costs a banner, not access.
+  try {
+    await sendVerificationEmail(row.id, row.email, row.name, await origin());
+  } catch (err) {
+    console.error("[vesper] verification email failed at signup:", err);
+  }
+
   await createSession(row.id);
   redirect("/dashboard");
 }
@@ -241,4 +252,22 @@ export async function demoLoginAction(): Promise<void> {
 
   await createSession(row.id);
   redirect("/dashboard");
+}
+
+/* -------------------------- email verification -------------------------- */
+
+/** Re-sends the confirmation link to the signed-in user's address. */
+export async function resendVerificationAction(): Promise<AuthState> {
+  const user = await getCurrentUser();
+  if (!user) return { error: "You need to be signed in." };
+  if (user.emailVerifiedAt) return { notice: "That address is already confirmed." };
+
+  const gate = await consume("verifyResend", `user:${user.id}`);
+  if (!gate.allowed) return tooMany(gate.retryAfter);
+
+  const { link } = await sendVerificationEmail(user.id, user.email, user.name, await origin());
+  const notice = `Confirmation link sent to ${user.email}.`;
+
+  // `link` is only returned by the console transport.
+  return link && process.env.NODE_ENV !== "production" ? { notice, devLink: link } : { notice };
 }

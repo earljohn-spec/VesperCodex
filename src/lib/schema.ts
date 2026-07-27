@@ -38,6 +38,16 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 );
 CREATE INDEX IF NOT EXISTS idx_reset_user ON password_reset_tokens(user_id);
 
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+  token_hash    TEXT PRIMARY KEY,
+  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email         TEXT NOT NULL,
+  expires_at    TEXT NOT NULL,
+  used_at       TEXT,
+  created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_verify_user ON email_verification_tokens(user_id);
+
 CREATE TABLE IF NOT EXISTS rate_limits (
   key           TEXT PRIMARY KEY,
   count         INTEGER NOT NULL DEFAULT 0,
@@ -215,6 +225,16 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 );
 CREATE INDEX IF NOT EXISTS idx_reset_user ON password_reset_tokens(user_id);
 
+CREATE TABLE IF NOT EXISTS email_verification_tokens (
+  token_hash    TEXT PRIMARY KEY,
+  user_id       TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  email         TEXT NOT NULL,
+  expires_at    TEXT NOT NULL,
+  used_at       TEXT,
+  created_at    TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_verify_user ON email_verification_tokens(user_id);
+
 CREATE TABLE IF NOT EXISTS rate_limits (
   key           TEXT PRIMARY KEY,
   count         INTEGER NOT NULL DEFAULT 0,
@@ -371,6 +391,14 @@ export const COLUMN_MIGRATIONS: {
   {
     table: "users",
     column: "password_changed_at",
+    definition: "TEXT",
+    pgDefinition: "TEXT",
+  },
+  // Null until the address is confirmed. Verification is deliberately soft —
+  // see src/lib/email-verification.ts for why we don't gate access on it.
+  {
+    table: "users",
+    column: "email_verified_at",
     definition: "TEXT",
     pgDefinition: "TEXT",
   },

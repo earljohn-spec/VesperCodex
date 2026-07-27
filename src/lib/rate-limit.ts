@@ -29,6 +29,8 @@ export const RATE_LIMITS = {
   passwordReset: { limit: 5, windowSec: 60 * 60 },
   /** Reset token submissions: stop guessing the token. */
   passwordResetConfirm: { limit: 10, windowSec: 60 * 60 },
+  /** Re-sending a confirmation email; stop us being used as a mail relay. */
+  verifyResend: { limit: 4, windowSec: 60 * 60 },
   /** The companion is the most expensive endpoint we expose. */
   chat: { limit: 30, windowSec: 60 },
   /** General authenticated writes. */

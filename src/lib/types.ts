@@ -54,6 +54,9 @@ export interface User {
   timezone: string;
   focusAreas: string[];
   onboarded: boolean;
+  /** Null until the address is confirmed. Verification is soft — see
+   *  src/lib/email-verification.ts. */
+  emailVerifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }

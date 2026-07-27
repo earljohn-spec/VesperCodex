@@ -3,13 +3,14 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { AlertCircle, CheckCircle2, Download, KeyRound, Trash2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Download, KeyRound, MailCheck, Trash2 } from "lucide-react";
 import { Button, Card, CardHeader, Input, Label, Modal, useToast } from "@/components/ui";
 import {
   changePasswordAction,
   deleteAccountAction,
   type AccountState,
 } from "@/lib/actions/account";
+import { resendVerificationAction, type AuthState } from "@/lib/actions/auth";
 
 function SubmitButton({ children, variant = "primary" }: { children: React.ReactNode; variant?: "primary" | "danger" }) {
   const { pending } = useFormStatus();
@@ -230,6 +231,74 @@ export function DeleteAccountPanel() {
           </div>
         </form>
       </Modal>
+    </Card>
+  );
+}
+
+/* --------------------------- email verification -------------------------- */
+
+export function EmailVerificationPanel({
+  email,
+  verifiedAt,
+}: {
+  email: string;
+  verifiedAt: string | null;
+}) {
+  const [state, formAction] = useActionState<AuthState, FormData>(
+    () => resendVerificationAction(),
+    {},
+  );
+
+  if (verifiedAt) {
+    return (
+      <Card className="mb-5">
+        <CardHeader title="Email" subtitle="Confirmed" icon={MailCheck} />
+        <div className="flex items-center gap-2.5 px-5 pb-5 text-sm text-emerald-200">
+          <CheckCircle2 className="h-4 w-4 shrink-0" />
+          <span>
+            <span className="text-white">{email}</span> is confirmed — we can reach you for
+            password resets.
+          </span>
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="mb-5 border-amber-500/25">
+      <CardHeader title="Email" subtitle="Not confirmed yet" icon={MailCheck} />
+      <form action={formAction} className="px-5 pb-5">
+        {state.notice && (
+          <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3.5 py-3 text-sm text-emerald-100">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{state.notice}</span>
+          </div>
+        )}
+        {state.error && (
+          <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-3 text-sm text-rose-200">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{state.error}</span>
+          </div>
+        )}
+
+        <p className="text-xs leading-relaxed text-ink-400">
+          We haven&apos;t confirmed <span className="text-ink-200">{email}</span> yet. Nothing is
+          locked — but without it we can&apos;t send you a password reset if you get locked out.
+        </p>
+
+        {state.devLink && (
+          <a
+            href={state.devLink}
+            className="mt-3 block break-all rounded-lg border border-ink-800 bg-ink-950/60 px-2.5 py-2 text-[11px] text-vesper-300 hover:text-vesper-200 focus-ring"
+          >
+            {state.devLink}
+          </a>
+        )}
+
+        <div className="mt-4">
+          <SubmitButton>Send confirmation link</SubmitButton>
+        </div>
+      </form>
     </Card>
   );
 }

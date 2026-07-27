@@ -229,3 +229,34 @@ export function passwordChangedTemplate(): Message {
     ),
   };
 }
+
+export function emailVerificationTemplate(
+  link: string,
+  name: string,
+  ttlHours: number,
+): Message & { link: string } {
+  const first = name.split(" ")[0] || "there";
+  return {
+    to: "",
+    link,
+    subject: "Confirm your email for Vesper",
+    text: [
+      `Hi ${first},`,
+      "",
+      "Confirm this address so we can reach you if you ever need to reset your password:",
+      link,
+      "",
+      `The link works for ${ttlHours} hours. You can keep using Vesper in the meantime —`,
+      "nothing is locked behind this.",
+      "",
+      "If you didn't sign up for Vesper, ignore this email and the account stays unused.",
+    ].join("\n"),
+    html: layout(
+      "Confirm your email",
+      `<p style="margin:0 0 12px;">Hi ${first} — confirm this address so we can reach you if you ever need to reset your password.</p>
+       <p style="margin:0;">The link works for <strong style="color:#fff;">${ttlHours} hours</strong>. You can keep using Vesper in the meantime; nothing is locked behind this.</p>
+       <p style="margin:12px 0 0;color:${BRAND.muted};font-size:13px;">Didn't sign up? Ignore this and the account stays unused.</p>`,
+      { label: "Confirm my email", url: link },
+    ),
+  };
+}
