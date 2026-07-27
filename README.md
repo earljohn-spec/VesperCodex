@@ -122,6 +122,12 @@ npm run test:verify # email verification lifecycle
 npx tsx scripts/check.ts   # print derived stats for the demo account
 ```
 
+## Testing it yourself
+
+**[docs/TESTING.md](docs/TESTING.md)** is a verified click-through: automated
+suites, every feature worth trying, the password-reset and email-verification
+flows, offline mode, and how to view real emails in a local inbox.
+
 ## Checking for problems
 
 Four commands, cheapest first. All four are currently clean.
