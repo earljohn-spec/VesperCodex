@@ -34,6 +34,7 @@ import {
 import { LineChart, RadialGauge } from "@/components/charts";
 import { PageHeader, StatCard, stressTone } from "@/components/shared";
 import { BreathingPlayer } from "@/components/breathing";
+import { FitbitPanel } from "@/components/fitbit-panel";
 import { OfflineBanner, useOffline } from "@/components/offline";
 import { cn } from "@/lib/utils";
 import { LocalNumber, LocalTime, RelativeTime } from "@/components/local-time";
@@ -58,11 +59,22 @@ const PROVIDER_LABEL: Record<DeviceProvider, string> = {
 };
 
 export function BiometricsView({
+  fitbitConfigured,
+  fitbitStatus,
+  fitbitCallback,
   devices: initialDevices,
   summary: initialSummary,
   samples: initialSamples,
   recentSpikes,
 }: {
+  fitbitConfigured: boolean;
+  fitbitStatus: {
+    connected: boolean;
+    scopes: string | null;
+    lastSyncAt: string | null;
+    lastError: string | null;
+  };
+  fitbitCallback?: string;
   devices: Device[];
   summary: BiometricSummary;
   samples: Biometric[];
@@ -349,6 +361,14 @@ export function BiometricsView({
             </div>
           </div>
         </Card>
+      </div>
+
+      <div className="mt-5">
+        <FitbitPanel
+          configured={fitbitConfigured}
+          initial={fitbitStatus}
+          callbackStatus={fitbitCallback}
+        />
       </div>
 
       {/* ------------------------------ devices ----------------------------- */}

@@ -48,6 +48,33 @@ CREATE TABLE IF NOT EXISTS email_verification_tokens (
 );
 CREATE INDEX IF NOT EXISTS idx_verify_user ON email_verification_tokens(user_id);
 
+CREATE TABLE IF NOT EXISTS oauth_connections (
+  id             TEXT PRIMARY KEY,
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider       TEXT NOT NULL,
+  provider_user_id TEXT,
+  access_token   TEXT NOT NULL,
+  refresh_token  TEXT NOT NULL,
+  scopes         TEXT NOT NULL DEFAULT '',
+  expires_at     TEXT NOT NULL,
+  last_sync_at   TEXT,
+  last_error     TEXT,
+  created_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL,
+  UNIQUE(user_id, provider)
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_user ON oauth_connections(user_id, provider);
+
+-- Short-lived PKCE state for an in-flight authorization.
+CREATE TABLE IF NOT EXISTS oauth_states (
+  state          TEXT PRIMARY KEY,
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider       TEXT NOT NULL,
+  code_verifier  TEXT NOT NULL,
+  expires_at     TEXT NOT NULL,
+  created_at     TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS rate_limits (
   key           TEXT PRIMARY KEY,
   count         INTEGER NOT NULL DEFAULT 0,
@@ -234,6 +261,33 @@ CREATE TABLE IF NOT EXISTS email_verification_tokens (
   created_at    TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_verify_user ON email_verification_tokens(user_id);
+
+CREATE TABLE IF NOT EXISTS oauth_connections (
+  id             TEXT PRIMARY KEY,
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider       TEXT NOT NULL,
+  provider_user_id TEXT,
+  access_token   TEXT NOT NULL,
+  refresh_token  TEXT NOT NULL,
+  scopes         TEXT NOT NULL DEFAULT '',
+  expires_at     TEXT NOT NULL,
+  last_sync_at   TEXT,
+  last_error     TEXT,
+  created_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL,
+  UNIQUE(user_id, provider)
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_user ON oauth_connections(user_id, provider);
+
+-- Short-lived PKCE state for an in-flight authorization.
+CREATE TABLE IF NOT EXISTS oauth_states (
+  state          TEXT PRIMARY KEY,
+  user_id        TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  provider       TEXT NOT NULL,
+  code_verifier  TEXT NOT NULL,
+  expires_at     TEXT NOT NULL,
+  created_at     TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS rate_limits (
   key           TEXT PRIMARY KEY,

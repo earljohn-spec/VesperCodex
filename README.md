@@ -119,6 +119,7 @@ npm run test        # security tests: rate limiting, reset, deletion
 npm run test:pg     # Postgres schema + query compatibility (via PGlite)
 npm run test:mail   # email templates + real SMTP delivery
 npm run test:verify # email verification lifecycle
+npm run test:fitbit # Fitbit OAuth, token encryption, API mapping
 npx tsx scripts/check.ts   # print derived stats for the demo account
 ```
 
@@ -252,8 +253,21 @@ What it buys us is confidence that a password reset can actually reach the
 account. Anything genuinely sensitive already requires the password. Settings
 shows the status and can resend, rate-limited to 4 per hour.
 
+### Fitbit
+
+Set `FITBIT_CLIENT_ID` and `FITBIT_CLIENT_SECRET` (see `.env.example`) and the
+Biometrics page gains a **Connect Fitbit** button. Vesper requests only
+heartrate, activity, sleep and profile, pulls on demand rather than streaming,
+and stores OAuth tokens encrypted with AES-256-GCM — a leaked database alone
+doesn't expose anyone's heart-rate history.
+
+Without credentials the page says so plainly and keeps using simulated
+readings. `npm run test:fitbit` runs the whole flow against a local mock of
+Fitbit's documented response shapes.
+
 **Still not implemented**
-- Real wearable APIs — biometrics are simulated locally
+- Apple HealthKit — needs a native iOS companion app, so it's a bigger piece
+  of work than the Fitbit REST integration
 
 A ready-to-use CI pipeline lives at `docs/ci.yml.example`. Copy it to
 `.github/workflows/ci.yml` to enable it — it runs typecheck, lint, the

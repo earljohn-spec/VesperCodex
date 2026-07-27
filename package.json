@@ -14,6 +14,7 @@
     "test:pg": "tsx scripts/test-postgres.ts",
     "test:mail": "tsx scripts/test-mail.ts",
     "test:verify": "tsx scripts/test-verification.ts",
+    "test:fitbit": "tsx scripts/test-fitbit.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:reset": "tsx scripts/reset.ts"
   },

@@ -31,6 +31,8 @@ export const RATE_LIMITS = {
   passwordResetConfirm: { limit: 10, windowSec: 60 * 60 },
   /** Re-sending a confirmation email; stop us being used as a mail relay. */
   verifyResend: { limit: 4, windowSec: 60 * 60 },
+  /** Fitbit allows 150 requests/hour per user; each sync spends five. */
+  fitbitSync: { limit: 20, windowSec: 60 * 60 },
   /** The companion is the most expensive endpoint we expose. */
   chat: { limit: 30, windowSec: 60 },
   /** General authenticated writes. */

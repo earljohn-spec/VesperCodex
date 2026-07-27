@@ -120,7 +120,30 @@ Remove-Item Env:SMTP_URL
 
 ---
 
-## 7. Try Postgres instead of SQLite
+## 7. Fitbit (optional)
+
+Without credentials the Biometrics page shows "Not configured" and keeps using
+simulated readings — that's the expected default.
+
+To try the real flow, register a **Server** app at
+<https://dev.fitbit.com/apps> with callback
+`http://localhost:3000/api/integrations/fitbit/callback`, then:
+
+```powershell
+$env:FITBIT_CLIENT_ID="your-id"
+$env:FITBIT_CLIENT_SECRET="your-secret"
+npm run dev
+```
+
+**Biometrics → Connect Fitbit** sends you to Fitbit's consent screen. After
+approving you land back on the page as *linked*; **Pull today's data** writes
+your real readings into the charts.
+
+No Fitbit account? `npm run test:fitbit` exercises the entire flow — PKCE,
+token exchange, refresh rotation, encryption at rest, API mapping, rate limits,
+and revoked grants — against a local mock (46 assertions).
+
+## 8. Try Postgres instead of SQLite
 
 Same code, one environment variable. With a Postgres instance available:
 
@@ -150,9 +173,9 @@ current no matter when you run it.
 
 ## Known limitations
 
-- **Biometrics are simulated.** The stress-detection logic and intervention
-  loop are real; the readings are generated locally rather than pulled from
-  Apple HealthKit or Fitbit.
+- **Biometrics are simulated unless you connect a Fitbit.** The stress-detection
+  logic and intervention loop are real either way. Apple HealthKit isn't
+  supported — it needs a native iOS app.
 - **Voice journalling needs Chrome, Edge or Safari.** Firefox lacks the Web
   Speech API; the UI says so and falls back to typing.
 - **The companion runs locally by default.** Set `VESPER_LLM_API_KEY` to route
