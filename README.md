@@ -172,6 +172,29 @@ VESPER_AUTH_SECRET=...      # set this in production
 VESPER_DB_PATH=./.data/vesper.db
 ```
 
+## Production readiness
+
+This is a complete, working application, but a few things are deliberately
+out of scope for a demo build. Read this before deploying it for real users.
+
+**Required before deploy**
+- Set `VESPER_AUTH_SECRET` (see `.env.example`). The app refuses to start in
+  production without it — the development fallback is public in this repo.
+- Point `VESPER_DB_PATH` at a persistent volume. SQLite on an ephemeral
+  filesystem (Vercel, Heroku) loses every write on redeploy.
+
+**Not implemented**
+- Password reset, email verification, account deletion / data export
+- Rate limiting on auth and API routes
+- Automated tests and CI
+- Real wearable APIs — biometrics are simulated locally
+- Multi-device sync conflict resolution beyond last-write-wins
+
+**If you handle real users' mental-health data**, note that this content is
+likely regulated (HIPAA in the US, GDPR special-category data in the EU).
+At minimum you would need encryption at rest, audit logging, a data-processing
+agreement, and a privacy policy. None of that is in here.
+
 ## Safety
 
 Vesper is a wellbeing tool, not therapy, diagnosis, or crisis care, and the biometric readings in

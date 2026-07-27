@@ -8,10 +8,49 @@ import type { User } from "./types";
 const SESSION_COOKIE = "vesper_session";
 const SESSION_DAYS = 30;
 
-const secretKey = new TextEncoder().encode(
-  process.env.VESPER_AUTH_SECRET ??
-    "vesper-dev-secret-please-override-in-production-0123456789abcdef",
-);
+/**
+ * Session signing key.
+ *
+ * The development fallback below is public (it lives in this repo), so anyone
+ * could forge a session JWT for any user id with it. Refuse to boot in
+ * production unless a real secret is supplied.
+ */
+const DEV_SECRET = "vesper-dev-secret-please-override-in-production-0123456789abcdef";
+
+/**
+ * Checked lazily on first use rather than at import time: `next build` runs
+ * with NODE_ENV=production and would otherwise fail the build on a machine
+ * that legitimately has no runtime secret configured.
+ */
+function resolveSecret(): Uint8Array {
+  const fromEnv = process.env.VESPER_AUTH_SECRET;
+
+  if (fromEnv && fromEnv.length >= 32) return new TextEncoder().encode(fromEnv);
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "VESPER_AUTH_SECRET must be set to a random string of at least 32 characters in production. " +
+        "Generate one with:  node -e \"console.log(require('crypto').randomBytes(48).toString('hex'))\"",
+    );
+  }
+
+  if (!warnedAboutSecret) {
+    warnedAboutSecret = true;
+    console.warn(
+      "[vesper] VESPER_AUTH_SECRET is not set — using the insecure development key. " +
+        "Set a real secret before deploying.",
+    );
+  }
+  return new TextEncoder().encode(fromEnv ?? DEV_SECRET);
+}
+
+let warnedAboutSecret = false;
+let cachedSecret: Uint8Array | null = null;
+
+function getSecretKey(): Uint8Array {
+  cachedSecret ??= resolveSecret();
+  return cachedSecret;
+}
 
 /* ------------------------------ passwords ------------------------------ */
 
@@ -68,7 +107,7 @@ async function signSessionToken(sessionId: string, userId: string) {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${SESSION_DAYS}d`)
-    .sign(secretKey);
+    .sign(getSecretKey());
 }
 
 export async function createSession(userId: string) {
@@ -96,7 +135,7 @@ export async function destroySession() {
   const token = store.get(SESSION_COOKIE)?.value;
   if (token) {
     try {
-      const { payload } = await jwtVerify(token, secretKey);
+      const { payload } = await jwtVerify(token, getSecretKey());
       if (payload.sid) execute(`DELETE FROM sessions WHERE id = ?`, [payload.sid as string]);
     } catch {
       /* token already invalid */
@@ -111,7 +150,7 @@ export async function getCurrentUser(): Promise<User | null> {
   const token = store.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secretKey);
+    const { payload } = await jwtVerify(token, getSecretKey());
     const sid = payload.sid as string | undefined;
     const uid = payload.sub as string | undefined;
     if (!sid || !uid) return null;
