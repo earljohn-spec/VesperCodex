@@ -14,7 +14,7 @@ export default async function SettingsPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const syncEvents = query<{
+  const syncEvents = await query<{
     id: string;
     resource: string;
     action: string;
@@ -26,33 +26,38 @@ export default async function SettingsPage() {
     [user.id],
   );
 
-  const stats = journalStats(user.id);
+  const stats = await journalStats(user.id);
   const counts = {
     entries: stats.total,
-    memories: listMemories(user.id).length,
-    devices: listDevices(user.id).length,
+    memories: (await listMemories(user.id)).length,
+    devices: (await listDevices(user.id)).length,
     pending: stats.pendingSync,
   };
 
   // Row counts for the export panel's summary.
-  const exportCounts = Object.fromEntries(
-    (
-      [
-        "journal_entries",
-        "habits",
-        "habit_logs",
-        "conversations",
-        "messages",
-        "memories",
-        "devices",
-        "biometrics",
-        "interventions",
-      ] as const
-    ).map((table) => [
-      table,
-      query<{ c: number }>(`SELECT COUNT(*) c FROM ${table} WHERE user_id = ?`, [user.id])[0]?.c ?? 0,
-    ]),
-  ) as Record<string, number>;
+  const EXPORT_TABLES = [
+    "journal_entries",
+    "habits",
+    "habit_logs",
+    "conversations",
+    "messages",
+    "memories",
+    "devices",
+    "biometrics",
+    "interventions",
+  ] as const;
+
+  const exportCounts: Record<string, number> = Object.fromEntries(
+    await Promise.all(
+      EXPORT_TABLES.map(async (table) => {
+        const rows = await query<{ c: number }>(
+          `SELECT COUNT(*) c FROM ${table} WHERE user_id = ?`,
+          [user.id],
+        );
+        return [table, Number(rows[0]?.c ?? 0)] as const;
+      }),
+    ),
+  );
 
   return (
     <SettingsView

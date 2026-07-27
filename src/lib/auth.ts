@@ -114,7 +114,7 @@ export async function createSession(userId: string) {
   const id = newId("sess");
   const created = new Date();
   const expires = new Date(created.getTime() + SESSION_DAYS * 86400_000);
-  execute(
+  await execute(
     `INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)`,
     [id, userId, created.toISOString(), expires.toISOString()],
   );
@@ -136,7 +136,7 @@ export async function destroySession() {
   if (token) {
     try {
       const { payload } = await jwtVerify(token, getSecretKey());
-      if (payload.sid) execute(`DELETE FROM sessions WHERE id = ?`, [payload.sid as string]);
+      if (payload.sid) await execute(`DELETE FROM sessions WHERE id = ?`, [payload.sid as string]);
     } catch {
       /* token already invalid */
     }
@@ -155,19 +155,27 @@ export async function getCurrentUser(): Promise<User | null> {
     const uid = payload.sub as string | undefined;
     if (!sid || !uid) return null;
 
-    const session = queryOne<{ id: string; expires_at: string }>(
+    const session = await queryOne<{ id: string; expires_at: string }>(
       `SELECT id, expires_at FROM sessions WHERE id = ? AND user_id = ?`,
       [sid, uid],
     );
     if (!session) return null;
     if (new Date(session.expires_at).getTime() < Date.now()) {
-      execute(`DELETE FROM sessions WHERE id = ?`, [sid]);
+      await execute(`DELETE FROM sessions WHERE id = ?`, [sid]);
       return null;
     }
 
-    const row = queryOne<DbUserRow>(`SELECT * FROM users WHERE id = ?`, [uid]);
+    const row = await queryOne<DbUserRow>(`SELECT * FROM users WHERE id = ?`, [uid]);
     return row ? mapUser(row) : null;
-  } catch {
+  } catch (err) {
+    // A malformed or expired token is normal; anything else is a bug we want
+    // to see rather than silently treat as "logged out".
+    if (process.env.NODE_ENV !== "production") {
+      const name = (err as Error)?.name ?? "";
+      if (!name.startsWith("JWT") && !name.startsWith("JWS")) {
+        console.error("[vesper] getCurrentUser failed unexpectedly:", err);
+      }
+    }
     return null;
   }
 }
@@ -185,11 +193,11 @@ export class AuthError extends Error {
 
 /* ------------------------------- accounts ------------------------------ */
 
-export function findUserByEmail(email: string) {
-  return queryOne<DbUserRow>(`SELECT * FROM users WHERE email = ?`, [email.toLowerCase().trim()]);
+export async function findUserByEmail(email: string) {
+  return await queryOne<DbUserRow>(`SELECT * FROM users WHERE email = ?`, [email.toLowerCase().trim()]);
 }
 
-export function createUser(input: {
+export async function createUser(input: {
   email: string;
   name: string;
   password: string;
@@ -199,7 +207,7 @@ export function createUser(input: {
   const id = newId("usr");
   const ts = nowIso();
   const hue = 200 + Math.floor(Math.random() * 140);
-  execute(
+  await execute(
     `INSERT INTO users (id, email, name, password_hash, avatar_hue, timezone, focus_areas, onboarded, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
     [
@@ -214,5 +222,5 @@ export function createUser(input: {
       ts,
     ],
   );
-  return queryOne<DbUserRow>(`SELECT * FROM users WHERE id = ?`, [id])!;
+  return (await queryOne<DbUserRow>(`SELECT * FROM users WHERE id = ?`, [id]))!;
 }

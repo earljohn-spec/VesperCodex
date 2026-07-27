@@ -28,19 +28,19 @@ export interface ExportBundle {
 }
 
 /** Everything we hold about a user, as plain JSON. Password hash excluded. */
-export function exportAccount(user: User): ExportBundle {
-  const t = <T,>(sql: string) => query<T>(sql, [user.id]);
+export async function exportAccount(user: User): Promise<ExportBundle> {
+  const t = async <T,>(sql: string) => await query<T>(sql, [user.id]);
 
-  const journalEntries = t(`SELECT * FROM journal_entries WHERE user_id = ? ORDER BY entry_date`);
-  const habits = t(`SELECT * FROM habits WHERE user_id = ? ORDER BY created_at`);
-  const habitLogs = t(`SELECT * FROM habit_logs WHERE user_id = ? ORDER BY log_date`);
-  const conversations = t(`SELECT * FROM conversations WHERE user_id = ? ORDER BY created_at`);
-  const messages = t(`SELECT * FROM messages WHERE user_id = ? ORDER BY created_at`);
-  const memories = t(`SELECT * FROM memories WHERE user_id = ? ORDER BY created_at`);
-  const devices = t(`SELECT * FROM devices WHERE user_id = ? ORDER BY created_at`);
-  const biometrics = t(`SELECT * FROM biometrics WHERE user_id = ? ORDER BY recorded_at`);
-  const interventions = t(`SELECT * FROM interventions WHERE user_id = ? ORDER BY triggered_at`);
-  const syncEvents = t(`SELECT * FROM sync_events WHERE user_id = ? ORDER BY created_at`);
+  const journalEntries = await t(`SELECT * FROM journal_entries WHERE user_id = ? ORDER BY entry_date`);
+  const habits = await t(`SELECT * FROM habits WHERE user_id = ? ORDER BY created_at`);
+  const habitLogs = await t(`SELECT * FROM habit_logs WHERE user_id = ? ORDER BY log_date`);
+  const conversations = await t(`SELECT * FROM conversations WHERE user_id = ? ORDER BY created_at`);
+  const messages = await t(`SELECT * FROM messages WHERE user_id = ? ORDER BY created_at`);
+  const memories = await t(`SELECT * FROM memories WHERE user_id = ? ORDER BY created_at`);
+  const devices = await t(`SELECT * FROM devices WHERE user_id = ? ORDER BY created_at`);
+  const biometrics = await t(`SELECT * FROM biometrics WHERE user_id = ? ORDER BY recorded_at`);
+  const interventions = await t(`SELECT * FROM interventions WHERE user_id = ? ORDER BY triggered_at`);
+  const syncEvents = await t(`SELECT * FROM sync_events WHERE user_id = ? ORDER BY created_at`);
 
   return {
     exportedAt: new Date().toISOString(),
@@ -81,25 +81,25 @@ export interface DeletionReport {
  * them first so the caller can show the user exactly what went, and we run it
  * in a transaction so a partial delete can't leave orphans.
  */
-export function deleteAccount(userId: string): DeletionReport {
-  const count = (table: string) =>
-    queryOne<{ c: number }>(`SELECT COUNT(*) c FROM ${table} WHERE user_id = ?`, [userId])?.c ?? 0;
+export async function deleteAccount(userId: string): Promise<DeletionReport> {
+  const count = async (table: string) =>
+    (await queryOne<{ c: number }>(`SELECT COUNT(*) c FROM ${table} WHERE user_id = ?`, [userId]))?.c ?? 0;
 
   const removed = {
-    journalEntries: count("journal_entries"),
-    habits: count("habits"),
-    habitLogs: count("habit_logs"),
-    conversations: count("conversations"),
-    messages: count("messages"),
-    memories: count("memories"),
-    devices: count("devices"),
-    biometrics: count("biometrics"),
-    interventions: count("interventions"),
-    syncEvents: count("sync_events"),
-    sessions: count("sessions"),
+    journalEntries: await count("journal_entries"),
+    habits: await count("habits"),
+    habitLogs: await count("habit_logs"),
+    conversations: await count("conversations"),
+    messages: await count("messages"),
+    memories: await count("memories"),
+    devices: await count("devices"),
+    biometrics: await count("biometrics"),
+    interventions: await count("interventions"),
+    syncEvents: await count("sync_events"),
+    sessions: await count("sessions"),
   };
 
-  transaction(() => {
+  await transaction(async () => {
     // Explicit deletes rather than relying solely on cascade, so the intent is
     // readable and the behaviour is identical if foreign_keys is ever off.
     for (const table of [
@@ -116,15 +116,15 @@ export function deleteAccount(userId: string): DeletionReport {
       "sessions",
       "password_reset_tokens",
     ]) {
-      execute(`DELETE FROM ${table} WHERE user_id = ?`, [userId]);
+      await execute(`DELETE FROM ${table} WHERE user_id = ?`, [userId]);
     }
-    execute(`DELETE FROM users WHERE id = ?`, [userId]);
+    await execute(`DELETE FROM users WHERE id = ?`, [userId]);
   });
 
   return { deleted: true, removed };
 }
 
 /** Verifies the account is really gone — used by tests. */
-export function accountExists(userId: string): boolean {
-  return !!queryOne(`SELECT id FROM users WHERE id = ?`, [userId]);
+export async function accountExists(userId: string): Promise<boolean> {
+  return !!(await queryOne(`SELECT id FROM users WHERE id = ?`, [userId]));
 }

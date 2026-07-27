@@ -42,14 +42,14 @@ export interface CompanionContext {
   hardestHour: string | null;
 }
 
-export function buildContext(user: User): CompanionContext {
-  const js = journalStats(user.id);
-  const bio = biometricSummary(user.id);
-  const hs = habitSummary(user.id);
-  const habits = listHabits(user.id);
-  const emotions = emotionBreakdown(user.id, 21).slice(0, 4);
-  const entries = listEntries(user.id, { limit: 1 });
-  const patterns = roughPatterns(user.id);
+export async function buildContext(user: User): Promise<CompanionContext> {
+  const js = await journalStats(user.id);
+  const bio = await biometricSummary(user.id);
+  const hs = await habitSummary(user.id);
+  const habits = await listHabits(user.id);
+  const emotions = (await emotionBreakdown(user.id, 21)).slice(0, 4);
+  const entries = await listEntries(user.id, { limit: 1 });
+  const patterns = await roughPatterns(user.id);
 
   const best = habits.reduce<{ name: string; streak: number } | null>(
     (acc, h) => (!acc || h.currentStreak > acc.streak ? { name: h.name, streak: h.currentStreak } : acc),
@@ -73,7 +73,7 @@ export function buildContext(user: User): CompanionContext {
     habitsDue: hs.dueToday,
     bestStreakHabit: best && best.streak > 0 ? best : null,
     strugglingHabit: struggling ? { name: struggling.name, adherence: struggling.adherence } : null,
-    memories: listMemories(user.id).slice(0, 12),
+    memories: (await listMemories(user.id)).slice(0, 12),
     recentEntryExcerpt: entries[0]?.body?.slice(0, 220) ?? null,
     recentEntryWhen: entries[0]?.entryDate ?? null,
     hardestHour: patterns.hardestHours[0]?.h ?? null,
@@ -174,7 +174,7 @@ const MEMORY_HINTS: { kind: Memory["kind"]; re: RegExp; label: (m: RegExpMatchAr
   ];
 
 /** Extract durable facts worth remembering from a user turn. */
-export function mineMemories(userId: string, text: string, existing: Memory[]): string[] {
+export async function mineMemories(userId: string, text: string, existing: Memory[]): Promise<string[]> {
   const found: string[] = [];
   const labels = new Set(existing.map((m) => m.label.toLowerCase()));
   for (const hint of MEMORY_HINTS) {
@@ -182,11 +182,11 @@ export function mineMemories(userId: string, text: string, existing: Memory[]): 
     if (!m) continue;
     const label = hint.label(m).slice(0, 60);
     if (labels.has(label.toLowerCase())) {
-      touchMemory(userId, label);
+      await touchMemory(userId, label);
       found.push(label);
       continue;
     }
-    createMemory(userId, {
+    await createMemory(userId, {
       kind: hint.kind,
       label,
       detail: `Noticed in conversation: “${text.slice(0, 140)}”`,
@@ -593,8 +593,8 @@ export async function generateReply(
   conversationId: string,
   userText: string,
 ): Promise<CompanionReply> {
-  const ctx = buildContext(user);
-  const history = listMessages(user.id, conversationId);
+  const ctx = await buildContext(user);
+  const history = await listMessages(user.id, conversationId);
   mineMemories(user.id, userText, ctx.memories);
   const remote = await remoteReply(ctx, userText, history);
   return remote ?? composeReply(ctx, userText, history);

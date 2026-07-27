@@ -15,6 +15,6 @@ const schema = z.object({
 export const POST = withUser(async (user, req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   const input = await parseBody(req, schema).catch(() => ({ date: undefined, note: undefined }));
-  const habit = toggleHabitLog(user.id, id, input.date ?? todayKey(), input.note ?? "");
+  const habit = await toggleHabitLog(user.id, id, input.date ?? todayKey(), input.note ?? "");
   return habit ? ok({ habit }) : fail("Habit not found", 404);
 });

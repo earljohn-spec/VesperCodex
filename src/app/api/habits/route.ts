@@ -18,11 +18,11 @@ const createSchema = z.object({
 export const GET = withUser(async (user, req: Request) => {
   const url = new URL(req.url);
   const includeArchived = url.searchParams.get("archived") === "true";
-  return ok({ habits: listHabits(user.id, includeArchived) });
+  return ok({ habits: await listHabits(user.id, includeArchived) });
 });
 
 export const POST = withUser(async (user, req: Request) => {
   const input = await parseBody(req, createSchema);
-  const habit = createHabit(user.id, input);
+  const habit = await createHabit(user.id, input);
   return ok({ habit }, 201);
 });

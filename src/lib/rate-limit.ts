@@ -50,15 +50,15 @@ export interface RateLimitResult {
  * Records a hit against `identifier` and reports whether it's allowed.
  * Call once per request, before doing the work.
  */
-export function consume(
+export async function consume(
   kind: RateLimitKind,
   identifier: string,
   rule: RateLimitRule = RATE_LIMITS[kind],
-): RateLimitResult {
+): Promise<RateLimitResult> {
   const key = `${kind}:${identifier}`;
   const now = Date.now();
 
-  const row = queryOne<{ count: number; window_start: string }>(
+  const row = await queryOne<{ count: number; window_start: string }>(
     `SELECT count, window_start FROM rate_limits WHERE key = ?`,
     [key],
   );
@@ -69,7 +69,7 @@ export function consume(
 
   if (expired) {
     const startIso = new Date(now).toISOString();
-    execute(
+    await execute(
       `INSERT INTO rate_limits (key, count, window_start) VALUES (?, 1, ?)
        ON CONFLICT(key) DO UPDATE SET count = 1, window_start = excluded.window_start`,
       [key, startIso],
@@ -96,7 +96,7 @@ export function consume(
     };
   }
 
-  execute(`UPDATE rate_limits SET count = ? WHERE key = ?`, [next, key]);
+  await execute(`UPDATE rate_limits SET count = ? WHERE key = ?`, [next, key]);
   return {
     allowed: true,
     remaining: rule.limit - next,
@@ -107,8 +107,8 @@ export function consume(
 }
 
 /** Clears a counter — used after a successful login so one bad day isn't punished. */
-export function reset(kind: RateLimitKind, identifier: string) {
-  execute(`DELETE FROM rate_limits WHERE key = ?`, [`${kind}:${identifier}`]);
+export async function reset(kind: RateLimitKind, identifier: string) {
+  await execute(`DELETE FROM rate_limits WHERE key = ?`, [`${kind}:${identifier}`]);
 }
 
 /**
@@ -126,21 +126,21 @@ export function clientIp(headers: Headers): string {
 }
 
 /** Drop counters whose window has long passed, so the table can't grow forever. */
-export function pruneRateLimits(olderThanHours = 24) {
+export async function pruneRateLimits(olderThanHours = 24) {
   const cutoff = new Date(Date.now() - olderThanHours * 3600_000).toISOString();
-  execute(`DELETE FROM rate_limits WHERE window_start < ?`, [cutoff]);
+  await execute(`DELETE FROM rate_limits WHERE window_start < ?`, [cutoff]);
 }
 
 /** Introspection for tests/debugging. */
-export function peek(kind: RateLimitKind, identifier: string) {
-  return queryOne<{ count: number; window_start: string }>(
+export async function peek(kind: RateLimitKind, identifier: string) {
+  return await queryOne<{ count: number; window_start: string }>(
     `SELECT count, window_start FROM rate_limits WHERE key = ?`,
     [`${kind}:${identifier}`],
   );
 }
 
-export function activeLimits() {
-  return query<{ key: string; count: number; window_start: string }>(
+export async function activeLimits() {
+  return await query<{ key: string; count: number; window_start: string }>(
     `SELECT key, count, window_start FROM rate_limits ORDER BY window_start DESC LIMIT 50`,
   );
 }

@@ -62,14 +62,14 @@ function mapBio(r: BioRow): Biometric {
 
 /* -------------------------------- devices ------------------------------- */
 
-export function listDevices(userId: string): Device[] {
-  return query<DeviceRow>(`SELECT * FROM devices WHERE user_id = ? ORDER BY created_at ASC`, [
+export async function listDevices(userId: string): Promise<Device[]> {
+  return (await query<DeviceRow>(`SELECT * FROM devices WHERE user_id = ? ORDER BY created_at ASC`, [
     userId,
-  ]).map(mapDevice);
+  ])).map(mapDevice);
 }
 
-export function getDevice(userId: string, id: string): Device | null {
-  const r = queryOne<DeviceRow>(`SELECT * FROM devices WHERE id = ? AND user_id = ?`, [id, userId]);
+export async function getDevice(userId: string, id: string): Promise<Device | null> {
+  const r = await queryOne<DeviceRow>(`SELECT * FROM devices WHERE id = ? AND user_id = ?`, [id, userId]);
   return r ? mapDevice(r) : null;
 }
 
@@ -80,10 +80,10 @@ export interface DeviceInput {
   battery?: number | null;
 }
 
-export function createDevice(userId: string, input: DeviceInput): Device {
+export async function createDevice(userId: string, input: DeviceInput): Promise<Device> {
   const id = newId("dev");
   const ts = nowIso();
-  execute(
+  await execute(
     `INSERT INTO devices (id, user_id, provider, display_name, status, battery, last_sync_at, created_at, updated_at)
      VALUES (?,?,?,?,?,?,?,?,?)`,
     [
@@ -98,15 +98,15 @@ export function createDevice(userId: string, input: DeviceInput): Device {
       ts,
     ],
   );
-  return getDevice(userId, id)!;
+  return (await getDevice(userId, id))!;
 }
 
-export function updateDevice(
+export async function updateDevice(
   userId: string,
   id: string,
   input: Partial<DeviceInput> & { lastSyncAt?: string },
-): Device | null {
-  if (!getDevice(userId, id)) return null;
+): Promise<Device | null> {
+  if (!await getDevice(userId, id)) return null;
   const sets: string[] = [];
   const params: unknown[] = [];
   const push = (c: string, v: unknown) => {
@@ -119,32 +119,32 @@ export function updateDevice(
   if (input.battery !== undefined) push("battery", input.battery);
   if (input.lastSyncAt !== undefined) push("last_sync_at", input.lastSyncAt);
   push("updated_at", nowIso());
-  execute(`UPDATE devices SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
+  await execute(`UPDATE devices SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
     ...params,
     id,
     userId,
   ]);
-  return getDevice(userId, id);
+  return await getDevice(userId, id);
 }
 
-export function deleteDevice(userId: string, id: string): boolean {
-  if (!getDevice(userId, id)) return false;
-  execute(`DELETE FROM devices WHERE id = ? AND user_id = ?`, [id, userId]);
+export async function deleteDevice(userId: string, id: string): Promise<boolean> {
+  if (!await getDevice(userId, id)) return false;
+  await execute(`DELETE FROM devices WHERE id = ? AND user_id = ?`, [id, userId]);
   return true;
 }
 
 /* ------------------------------ biometrics ------------------------------ */
 
-export function listBiometrics(userId: string, hours = 24): Biometric[] {
+export async function listBiometrics(userId: string, hours = 24): Promise<Biometric[]> {
   const since = new Date(Date.now() - hours * 3600_000).toISOString();
-  return query<BioRow>(
+  return (await query<BioRow>(
     `SELECT * FROM biometrics WHERE user_id = ? AND recorded_at >= ? ORDER BY recorded_at ASC`,
     [userId, since],
-  ).map(mapBio);
+  )).map(mapBio);
 }
 
-export function latestBiometric(userId: string): Biometric | null {
-  const r = queryOne<BioRow>(
+export async function latestBiometric(userId: string): Promise<Biometric | null> {
+  const r = await queryOne<BioRow>(
     `SELECT * FROM biometrics WHERE user_id = ? ORDER BY recorded_at DESC LIMIT 1`,
     [userId],
   );
@@ -191,11 +191,11 @@ export function deriveStressIndex(input: {
   return Math.round(Math.max(0, Math.min(100, score)));
 }
 
-export function createBiometric(userId: string, input: BiometricInput): Biometric {
+export async function createBiometric(userId: string, input: BiometricInput): Promise<Biometric> {
   const id = newId("bio");
   const ts = nowIso();
   const stress = deriveStressIndex(input);
-  execute(
+  await execute(
     `INSERT INTO biometrics (id, user_id, device_id, recorded_at, hrv, resting_hr, heart_rate, respiration, sleep_hours, steps, stress_index, created_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
@@ -213,17 +213,17 @@ export function createBiometric(userId: string, input: BiometricInput): Biometri
       ts,
     ],
   );
-  const r = queryOne<BioRow>(`SELECT * FROM biometrics WHERE id = ?`, [id])!;
+  const r = (await queryOne<BioRow>(`SELECT * FROM biometrics WHERE id = ?`, [id]))!;
   return mapBio(r);
 }
 
-export function deleteBiometric(userId: string, id: string): boolean {
-  const r = queryOne<BioRow>(`SELECT id FROM biometrics WHERE id = ? AND user_id = ?`, [
+export async function deleteBiometric(userId: string, id: string): Promise<boolean> {
+  const r = await queryOne<BioRow>(`SELECT id FROM biometrics WHERE id = ? AND user_id = ?`, [
     id,
     userId,
   ]);
   if (!r) return false;
-  execute(`DELETE FROM biometrics WHERE id = ? AND user_id = ?`, [id, userId]);
+  await execute(`DELETE FROM biometrics WHERE id = ? AND user_id = ?`, [id, userId]);
   return true;
 }
 
@@ -243,11 +243,11 @@ export interface BiometricSummary {
   readiness: number;
 }
 
-export function biometricSummary(userId: string): BiometricSummary {
-  const latest = latestBiometric(userId);
-  const day = listBiometrics(userId, 24);
+export async function biometricSummary(userId: string): Promise<BiometricSummary> {
+  const latest = await latestBiometric(userId);
+  const day = await listBiometrics(userId, 24);
 
-  const baselineRow = queryOne<{ m: number | null }>(
+  const baselineRow = await queryOne<{ m: number | null }>(
     `SELECT AVG(hrv) m FROM biometrics WHERE user_id = ? AND recorded_at >= ? AND hrv IS NOT NULL`,
     [userId, new Date(Date.now() - 30 * 86400_000).toISOString()],
   );
@@ -258,12 +258,12 @@ export function biometricSummary(userId: string): BiometricSummary {
   const peak = stresses.length ? Math.max(...stresses) : 0;
   const spikes = day.filter((d) => d.stressIndex >= 65).length;
 
-  const sleepRow = queryOne<{ s: number | null }>(
+  const sleepRow = await queryOne<{ s: number | null }>(
     `SELECT sleep_hours s FROM biometrics WHERE user_id = ? AND sleep_hours IS NOT NULL
      ORDER BY recorded_at DESC LIMIT 1`,
     [userId],
   );
-  const stepsRow = queryOne<{ s: number | null }>(
+  const stepsRow = await queryOne<{ s: number | null }>(
     `SELECT MAX(steps) s FROM biometrics WHERE user_id = ? AND recorded_at >= ?`,
     [userId, new Date(new Date().setHours(0, 0, 0, 0)).toISOString()],
   );

@@ -80,8 +80,8 @@ function mapMem(r: MemRow): Memory {
 
 /* ----------------------------- conversations ---------------------------- */
 
-export function listConversations(userId: string, includeArchived = false): Conversation[] {
-  return query<ConvRow>(
+export async function listConversations(userId: string, includeArchived = false): Promise<Conversation[]> {
+  return (await query<ConvRow>(
     `SELECT c.*,
             (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) AS message_count,
             (SELECT m.content FROM messages m WHERE m.conversation_id = c.id
@@ -90,11 +90,11 @@ export function listConversations(userId: string, includeArchived = false): Conv
      WHERE c.user_id = ? ${includeArchived ? "" : "AND c.archived = 0"}
      ORDER BY c.pinned DESC, c.updated_at DESC`,
     [userId],
-  ).map(mapConv);
+  )).map(mapConv);
 }
 
-export function getConversation(userId: string, id: string): Conversation | null {
-  const r = queryOne<ConvRow>(
+export async function getConversation(userId: string, id: string): Promise<Conversation | null> {
+  const r = await queryOne<ConvRow>(
     `SELECT c.*,
             (SELECT COUNT(*) FROM messages m WHERE m.conversation_id = c.id) AS message_count
      FROM conversations c WHERE c.id = ? AND c.user_id = ?`,
@@ -103,26 +103,26 @@ export function getConversation(userId: string, id: string): Conversation | null
   return r ? mapConv(r) : null;
 }
 
-export function createConversation(
+export async function createConversation(
   userId: string,
   input: { title?: string; summary?: string } = {},
-): Conversation {
+): Promise<Conversation> {
   const id = newId("cnv");
   const ts = nowIso();
-  execute(
+  await execute(
     `INSERT INTO conversations (id, user_id, title, summary, pinned, archived, created_at, updated_at)
      VALUES (?,?,?,?,0,0,?,?)`,
     [id, userId, input.title?.trim() || "New conversation", input.summary ?? "", ts, ts],
   );
-  return getConversation(userId, id)!;
+  return (await getConversation(userId, id))!;
 }
 
-export function updateConversation(
+export async function updateConversation(
   userId: string,
   id: string,
   input: { title?: string; summary?: string; pinned?: boolean; archived?: boolean },
-): Conversation | null {
-  if (!getConversation(userId, id)) return null;
+): Promise<Conversation | null> {
+  if (!await getConversation(userId, id)) return null;
   const sets: string[] = [];
   const params: unknown[] = [];
   const push = (c: string, v: unknown) => {
@@ -134,30 +134,30 @@ export function updateConversation(
   if (input.pinned !== undefined) push("pinned", input.pinned ? 1 : 0);
   if (input.archived !== undefined) push("archived", input.archived ? 1 : 0);
   push("updated_at", nowIso());
-  execute(`UPDATE conversations SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
+  await execute(`UPDATE conversations SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
     ...params,
     id,
     userId,
   ]);
-  return getConversation(userId, id);
+  return await getConversation(userId, id);
 }
 
-export function deleteConversation(userId: string, id: string): boolean {
-  if (!getConversation(userId, id)) return false;
-  execute(`DELETE FROM conversations WHERE id = ? AND user_id = ?`, [id, userId]);
+export async function deleteConversation(userId: string, id: string): Promise<boolean> {
+  if (!await getConversation(userId, id)) return false;
+  await execute(`DELETE FROM conversations WHERE id = ? AND user_id = ?`, [id, userId]);
   return true;
 }
 
 /* -------------------------------- messages ------------------------------ */
 
-export function listMessages(userId: string, conversationId: string): Message[] {
-  return query<MsgRow>(
+export async function listMessages(userId: string, conversationId: string): Promise<Message[]> {
+  return (await query<MsgRow>(
     `SELECT * FROM messages WHERE conversation_id = ? AND user_id = ? ORDER BY created_at ASC`,
     [conversationId, userId],
-  ).map(mapMsg);
+  )).map(mapMsg);
 }
 
-export function addMessage(
+export async function addMessage(
   userId: string,
   conversationId: string,
   input: {
@@ -167,10 +167,10 @@ export function addMessage(
     contextUsed?: string[];
     createdAt?: string;
   },
-): Message {
+): Promise<Message> {
   const id = newId("msg");
   const ts = input.createdAt ?? nowIso();
-  execute(
+  await execute(
     `INSERT INTO messages (id, conversation_id, user_id, role, content, strategy, context_used, created_at)
      VALUES (?,?,?,?,?,?,?,?)`,
     [
@@ -184,35 +184,35 @@ export function addMessage(
       ts,
     ],
   );
-  execute(`UPDATE conversations SET updated_at = ? WHERE id = ?`, [ts, conversationId]);
-  const r = queryOne<MsgRow>(`SELECT * FROM messages WHERE id = ?`, [id])!;
+  await execute(`UPDATE conversations SET updated_at = ? WHERE id = ?`, [ts, conversationId]);
+  const r = (await queryOne<MsgRow>(`SELECT * FROM messages WHERE id = ?`, [id]))!;
   return mapMsg(r);
 }
 
-export function deleteMessage(userId: string, id: string): boolean {
-  const r = queryOne<MsgRow>(`SELECT * FROM messages WHERE id = ? AND user_id = ?`, [id, userId]);
+export async function deleteMessage(userId: string, id: string): Promise<boolean> {
+  const r = await queryOne<MsgRow>(`SELECT * FROM messages WHERE id = ? AND user_id = ?`, [id, userId]);
   if (!r) return false;
-  execute(`DELETE FROM messages WHERE id = ? AND user_id = ?`, [id, userId]);
+  await execute(`DELETE FROM messages WHERE id = ? AND user_id = ?`, [id, userId]);
   return true;
 }
 
 /* -------------------------------- memories ------------------------------ */
 
-export function listMemories(userId: string, kind?: string): Memory[] {
+export async function listMemories(userId: string, kind?: string): Promise<Memory[]> {
   const clauses = ["user_id = ?"];
   const params: unknown[] = [userId];
   if (kind && kind !== "all") {
     clauses.push("kind = ?");
     params.push(kind);
   }
-  return query<MemRow>(
+  return (await query<MemRow>(
     `SELECT * FROM memories WHERE ${clauses.join(" AND ")} ORDER BY weight DESC, last_seen_at DESC`,
     params,
-  ).map(mapMem);
+  )).map(mapMem);
 }
 
-export function getMemory(userId: string, id: string): Memory | null {
-  const r = queryOne<MemRow>(`SELECT * FROM memories WHERE id = ? AND user_id = ?`, [id, userId]);
+export async function getMemory(userId: string, id: string): Promise<Memory | null> {
+  const r = await queryOne<MemRow>(`SELECT * FROM memories WHERE id = ? AND user_id = ?`, [id, userId]);
   return r ? mapMem(r) : null;
 }
 
@@ -223,23 +223,23 @@ export interface MemoryInput {
   weight?: number;
 }
 
-export function createMemory(userId: string, input: MemoryInput): Memory {
+export async function createMemory(userId: string, input: MemoryInput): Promise<Memory> {
   const id = newId("mem");
   const ts = nowIso();
-  execute(
+  await execute(
     `INSERT INTO memories (id, user_id, kind, label, detail, weight, last_seen_at, created_at)
      VALUES (?,?,?,?,?,?,?,?)`,
     [id, userId, input.kind, input.label.trim(), input.detail?.trim() ?? "", input.weight ?? 1, ts, ts],
   );
-  return getMemory(userId, id)!;
+  return (await getMemory(userId, id))!;
 }
 
-export function updateMemory(
+export async function updateMemory(
   userId: string,
   id: string,
   input: Partial<MemoryInput> & { lastSeenAt?: string },
-): Memory | null {
-  if (!getMemory(userId, id)) return null;
+): Promise<Memory | null> {
+  if (!await getMemory(userId, id)) return null;
   const sets: string[] = [];
   const params: unknown[] = [];
   const push = (c: string, v: unknown) => {
@@ -251,23 +251,23 @@ export function updateMemory(
   if (input.detail !== undefined) push("detail", input.detail.trim());
   if (input.weight !== undefined) push("weight", input.weight);
   if (input.lastSeenAt !== undefined) push("last_seen_at", input.lastSeenAt);
-  if (sets.length === 0) return getMemory(userId, id);
-  execute(`UPDATE memories SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
+  if (sets.length === 0) return await getMemory(userId, id);
+  await execute(`UPDATE memories SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
     ...params,
     id,
     userId,
   ]);
-  return getMemory(userId, id);
+  return await getMemory(userId, id);
 }
 
-export function deleteMemory(userId: string, id: string): boolean {
-  if (!getMemory(userId, id)) return false;
-  execute(`DELETE FROM memories WHERE id = ? AND user_id = ?`, [id, userId]);
+export async function deleteMemory(userId: string, id: string): Promise<boolean> {
+  if (!await getMemory(userId, id)) return false;
+  await execute(`DELETE FROM memories WHERE id = ? AND user_id = ?`, [id, userId]);
   return true;
 }
 
-export function touchMemory(userId: string, label: string) {
-  execute(
+export async function touchMemory(userId: string, label: string) {
+  await execute(
     `UPDATE memories SET last_seen_at = ?, weight = MIN(weight + 0.15, 5) WHERE user_id = ? AND label = ?`,
     [nowIso(), userId, label],
   );

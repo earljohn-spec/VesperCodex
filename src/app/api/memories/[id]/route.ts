@@ -16,11 +16,11 @@ const schema = z.object({
 export const PATCH = withUser(async (user, req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   const input = await parseBody(req, schema);
-  const memory = updateMemory(user.id, id, input);
+  const memory = await updateMemory(user.id, id, input);
   return memory ? ok({ memory }) : fail("Memory not found", 404);
 });
 
 export const DELETE = withUser(async (user, _req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
-  return deleteMemory(user.id, id) ? ok({ deleted: id }) : fail("Memory not found", 404);
+  return await deleteMemory(user.id, id) ? ok({ deleted: id }) : fail("Memory not found", 404);
 });

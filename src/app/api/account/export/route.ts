@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 /** Downloads everything we hold about the signed-in user as JSON. */
 export const GET = withUser(async (user) => {
-  const bundle = exportAccount(user);
+  const bundle = await exportAccount(user);
   const stamp = new Date().toISOString().slice(0, 10);
 
   return new Response(JSON.stringify(bundle, null, 2), {

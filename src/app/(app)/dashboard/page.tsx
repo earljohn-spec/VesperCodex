@@ -29,17 +29,17 @@ async function DashboardData() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const stats = journalStats(user.id);
-  const bio = biometricSummary(user.id);
-  const habits = listHabits(user.id);
-  const hSummary = habitSummary(user.id);
-  const breaks = activeInterventions(user.id);
-  const bSummary = interventionSummary(user.id);
-  const trend = moodTrend(user.id, 30);
-  const emotions = emotionBreakdown(user.id, 30).slice(0, 8);
-  const recent = listEntries(user.id, { limit: 3 });
-  const todaySamples = listBiometrics(user.id, 14);
-  const ctx = buildContext(user);
+  const stats = await journalStats(user.id);
+  const bio = await biometricSummary(user.id);
+  const habits = await listHabits(user.id);
+  const hSummary = await habitSummary(user.id);
+  const breaks = await activeInterventions(user.id);
+  const bSummary = await interventionSummary(user.id);
+  const trend = await moodTrend(user.id, 30);
+  const emotions = (await emotionBreakdown(user.id, 30)).slice(0, 8);
+  const recent = await listEntries(user.id, { limit: 3 });
+  const todaySamples = await listBiometrics(user.id, 14);
+  const ctx = await buildContext(user);
 
   return (
     <DashboardView

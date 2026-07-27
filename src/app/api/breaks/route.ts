@@ -23,7 +23,7 @@ const schema = z.object({
 export const GET = withUser(async (user, req: Request) => {
   const url = new URL(req.url);
   return ok({
-    interventions: listInterventions(user.id, {
+    interventions: await listInterventions(user.id, {
       status: url.searchParams.get("status") ?? undefined,
       limit: Number(url.searchParams.get("limit") ?? 100),
     }),
@@ -34,14 +34,14 @@ export const POST = withUser(async (user, req: Request) => {
   const input = await parseBody(req, schema).catch(() => ({ auto: true }) as z.infer<typeof schema>);
 
   if (input.auto || !input.title) {
-    const bio = biometricSummary(user.id);
+    const bio = await biometricSummary(user.id);
     const rec = recommendBreak(bio.stressNow, bio.hrvDelta);
-    return ok({ intervention: createIntervention(user.id, { ...rec, ...stripUndefined(input) }) }, 201);
+    return ok({ intervention: await createIntervention(user.id, { ...rec, ...stripUndefined(input) }) }, 201);
   }
 
   return ok(
     {
-      intervention: createIntervention(user.id, {
+      intervention: await createIntervention(user.id, {
         kind: input.kind ?? "breathing",
         title: input.title,
         detail: input.detail,

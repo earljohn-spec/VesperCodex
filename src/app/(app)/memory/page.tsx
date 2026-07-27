@@ -10,5 +10,5 @@ export const dynamic = "force-dynamic";
 export default async function MemoryPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  return <MemoryView memories={listMemories(user.id)} />;
+  return <MemoryView memories={await listMemories(user.id)} />;
 }

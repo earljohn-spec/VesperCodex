@@ -8,8 +8,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const stats = journalStats(user.id);
-  const breaks = interventionSummary(user.id);
+  const stats = await journalStats(user.id);
+  const breaks = await interventionSummary(user.id);
 
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">

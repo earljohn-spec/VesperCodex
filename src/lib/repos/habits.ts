@@ -57,13 +57,13 @@ function mapLog(row: LogRow): HabitLog {
   };
 }
 
-export function listHabits(userId: string, includeArchived = false): HabitWithStats[] {
-  const rows = query<HabitRow>(
+export async function listHabits(userId: string, includeArchived = false): Promise<HabitWithStats[]> {
+  const rows = await query<HabitRow>(
     `SELECT * FROM habits WHERE user_id = ? ${includeArchived ? "" : "AND archived = 0"}
      ORDER BY archived ASC, created_at ASC`,
     [userId],
   );
-  const logs = query<LogRow>(
+  const logs = await query<LogRow>(
     `SELECT * FROM habit_logs WHERE user_id = ? AND completed = 1 ORDER BY log_date DESC`,
     [userId],
   );
@@ -143,10 +143,10 @@ function withStats(habit: Habit, days: Set<string>): HabitWithStats {
   };
 }
 
-export function getHabit(userId: string, id: string): HabitWithStats | null {
-  const row = queryOne<HabitRow>(`SELECT * FROM habits WHERE id = ? AND user_id = ?`, [id, userId]);
+export async function getHabit(userId: string, id: string): Promise<HabitWithStats | null> {
+  const row = await queryOne<HabitRow>(`SELECT * FROM habits WHERE id = ? AND user_id = ?`, [id, userId]);
   if (!row) return null;
-  const logs = query<LogRow>(
+  const logs = await query<LogRow>(
     `SELECT * FROM habit_logs WHERE habit_id = ? AND completed = 1`,
     [id],
   );
@@ -164,10 +164,10 @@ export interface HabitInput {
   archived?: boolean;
 }
 
-export function createHabit(userId: string, input: HabitInput): HabitWithStats {
+export async function createHabit(userId: string, input: HabitInput): Promise<HabitWithStats> {
   const id = newId("hab");
   const ts = nowIso();
-  execute(
+  await execute(
     `INSERT INTO habits (id, user_id, name, description, icon, color, cadence, target_per_week, reminder_time, archived, created_at, updated_at)
      VALUES (?,?,?,?,?,?,?,?,?,0,?,?)`,
     [
@@ -184,15 +184,15 @@ export function createHabit(userId: string, input: HabitInput): HabitWithStats {
       ts,
     ],
   );
-  return getHabit(userId, id)!;
+  return (await getHabit(userId, id))!;
 }
 
-export function updateHabit(
+export async function updateHabit(
   userId: string,
   id: string,
   input: Partial<HabitInput>,
-): HabitWithStats | null {
-  if (!getHabit(userId, id)) return null;
+): Promise<HabitWithStats | null> {
+  if (!await getHabit(userId, id)) return null;
   const sets: string[] = [];
   const params: unknown[] = [];
   const push = (c: string, v: unknown) => {
@@ -208,50 +208,50 @@ export function updateHabit(
   if (input.reminderTime !== undefined) push("reminder_time", input.reminderTime);
   if (input.archived !== undefined) push("archived", input.archived ? 1 : 0);
   push("updated_at", nowIso());
-  execute(`UPDATE habits SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
+  await execute(`UPDATE habits SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
     ...params,
     id,
     userId,
   ]);
-  return getHabit(userId, id);
+  return await getHabit(userId, id);
 }
 
-export function deleteHabit(userId: string, id: string): boolean {
-  if (!getHabit(userId, id)) return false;
-  execute(`DELETE FROM habits WHERE id = ? AND user_id = ?`, [id, userId]);
+export async function deleteHabit(userId: string, id: string): Promise<boolean> {
+  if (!await getHabit(userId, id)) return false;
+  await execute(`DELETE FROM habits WHERE id = ? AND user_id = ?`, [id, userId]);
   return true;
 }
 
 /** Toggle a habit for a given date. Returns the updated habit. */
-export function toggleHabitLog(
+export async function toggleHabitLog(
   userId: string,
   habitId: string,
   date = todayKey(),
   note = "",
-): HabitWithStats | null {
-  const habit = getHabit(userId, habitId);
+): Promise<HabitWithStats | null> {
+  const habit = await getHabit(userId, habitId);
   if (!habit) return null;
-  const existing = queryOne<LogRow>(
+  const existing = await queryOne<LogRow>(
     `SELECT * FROM habit_logs WHERE habit_id = ? AND log_date = ?`,
     [habitId, date],
   );
   if (existing) {
-    execute(`DELETE FROM habit_logs WHERE id = ?`, [existing.id]);
+    await execute(`DELETE FROM habit_logs WHERE id = ?`, [existing.id]);
   } else {
-    execute(
+    await execute(
       `INSERT INTO habit_logs (id, habit_id, user_id, log_date, completed, note, created_at)
        VALUES (?,?,?,?,1,?,?)`,
       [newId("hlg"), habitId, userId, date, note, nowIso()],
     );
   }
-  return getHabit(userId, habitId);
+  return await getHabit(userId, habitId);
 }
 
-export function listLogs(userId: string, habitId: string, limit = 60): HabitLog[] {
-  return query<LogRow>(
+export async function listLogs(userId: string, habitId: string, limit = 60): Promise<HabitLog[]> {
+  return (await query<LogRow>(
     `SELECT * FROM habit_logs WHERE user_id = ? AND habit_id = ? ORDER BY log_date DESC LIMIT ?`,
     [userId, habitId, limit],
-  ).map(mapLog);
+  )).map(mapLog);
 }
 
 export interface HabitSummary {
@@ -262,8 +262,8 @@ export interface HabitSummary {
   weeklyAdherence: number;
 }
 
-export function habitSummary(userId: string): HabitSummary {
-  const habits = listHabits(userId);
+export async function habitSummary(userId: string): Promise<HabitSummary> {
+  const habits = await listHabits(userId);
   const dueToday = habits.filter((h) => {
     if (h.cadence === "daily") return true;
     if (h.cadence === "weekdays") {

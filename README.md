@@ -57,13 +57,32 @@ any of it.
 |---|---|
 | Framework | Next.js 16 (App Router, RSC, Server Actions) |
 | UI | React 19, Tailwind CSS v4 |
-| Database | SQLite via Node's built-in `node:sqlite` |
+| Database | SQLite (dev) or Postgres (production) — same code, one env var |
 | Auth | scrypt password hashing + JWT sessions (`jose`), httpOnly cookies |
 | Validation | Zod on every API route |
 | Charts | Hand-rolled SVG — no charting dependency |
 
-**Why `node:sqlite`?** It ships with Node 22.5+, so there's no native compilation step and no
-`better-sqlite3` build failures on machines without Python and a C++ toolchain. Requires Node ≥ 22.5.
+### Choosing a database
+
+Vesper talks to both through one async interface in `src/lib/db.ts`.
+
+- **SQLite** is the default and needs no setup — `npm run dev` just works. It uses Node's
+  built-in `node:sqlite` (Node ≥ 22.5), so there's no native build step.
+- **Postgres** is used automatically whenever `DATABASE_URL` is set:
+
+  ```bash
+  DATABASE_URL=postgres://user:pass@host:5432/vesper npm run dev
+  ```
+
+Use Postgres for anything real. SQLite on an ephemeral filesystem (Vercel, Heroku, Fly without a
+volume) loses every write on redeploy, and it serialises concurrent writers.
+
+Queries are written once with `?` placeholders and rewritten to `$1, $2, …` for Postgres. The
+schema exists in both dialects in `src/lib/schema.ts` — Postgres gets real `BOOLEAN` and
+`DOUBLE PRECISION` columns rather than SQLite's integers.
+
+`npm run test:pg` exercises the Postgres path against PGlite (Postgres compiled to WASM), so the
+real parser, constraints and cascades are verified without needing a server.
 
 ## Project layout
 
@@ -97,6 +116,7 @@ npm run db:reset    # delete the database
 npm run typecheck   # tsc --noEmit
 npm run lint        # eslint (flat config, ESLint 9)
 npm run test        # security tests: rate limiting, reset, deletion
+npm run test:pg     # Postgres schema + query compatibility (via PGlite)
 npx tsx scripts/check.ts   # print derived stats for the demo account
 ```
 
@@ -182,7 +202,7 @@ out of scope for a demo build. Read this before deploying it for real users.
 **Required before deploy**
 - Set `VESPER_AUTH_SECRET` (see `.env.example`). The app refuses to start in
   production without it — the development fallback is public in this repo.
-- Point `VESPER_DB_PATH` at a persistent volume. SQLite on an ephemeral
+- Set `DATABASE_URL` to a Postgres connection string. SQLite on an ephemeral
   filesystem (Vercel, Heroku) loses every write on redeploy.
 
 **Implemented**

@@ -14,10 +14,10 @@ const schema = z.object({
 
 export const GET = withUser(async (user, req: Request) => {
   const url = new URL(req.url);
-  return ok({ memories: listMemories(user.id, url.searchParams.get("kind") ?? undefined) });
+  return ok({ memories: await listMemories(user.id, url.searchParams.get("kind") ?? undefined) });
 });
 
 export const POST = withUser(async (user, req: Request) => {
   const input = await parseBody(req, schema);
-  return ok({ memory: createMemory(user.id, input) }, 201);
+  return ok({ memory: await createMemory(user.id, input) }, 201);
 });

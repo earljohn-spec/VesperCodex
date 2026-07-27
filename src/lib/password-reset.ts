@@ -24,14 +24,14 @@ export interface IssuedToken {
 }
 
 /** Creates a reset token for a user. Caller is responsible for delivering it. */
-export function issueResetToken(userId: string): IssuedToken {
+export async function issueResetToken(userId: string): Promise<IssuedToken> {
   // Any previously issued token becomes void.
-  execute(`DELETE FROM password_reset_tokens WHERE user_id = ?`, [userId]);
+  await execute(`DELETE FROM password_reset_tokens WHERE user_id = ?`, [userId]);
 
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + TOKEN_TTL_MIN * 60_000).toISOString();
 
-  execute(
+  await execute(
     `INSERT INTO password_reset_tokens (token_hash, user_id, expires_at, used_at, created_at)
      VALUES (?, ?, ?, NULL, ?)`,
     [hashToken(token), userId, expiresAt, nowIso()],
@@ -44,8 +44,8 @@ export type TokenCheck =
   | { valid: true; userId: string }
   | { valid: false; reason: "unknown" | "expired" | "used" };
 
-export function verifyResetToken(token: string): TokenCheck {
-  const row = queryOne<{
+export async function verifyResetToken(token: string): Promise<TokenCheck> {
+  const row = await queryOne<{
     token_hash: string;
     user_id: string;
     expires_at: string;
@@ -77,27 +77,27 @@ export type ResetOutcome =
  * Consumes the token, sets the new password, and signs out every existing
  * session — if the account was compromised, the attacker loses access too.
  */
-export function completeReset(token: string, newPassword: string): ResetOutcome {
-  const check = verifyResetToken(token);
+export async function completeReset(token: string, newPassword: string): Promise<ResetOutcome> {
+  const check = await verifyResetToken(token);
   if (!check.valid) return { ok: false, reason: check.reason };
 
   const ts = nowIso();
-  execute(
+  await execute(
     `UPDATE users SET password_hash = ?, password_changed_at = ?, updated_at = ? WHERE id = ?`,
     [hashPassword(newPassword), ts, ts, check.userId],
   );
-  execute(`UPDATE password_reset_tokens SET used_at = ? WHERE token_hash = ?`, [
+  await execute(`UPDATE password_reset_tokens SET used_at = ? WHERE token_hash = ?`, [
     ts,
     hashToken(token),
   ]);
-  execute(`DELETE FROM sessions WHERE user_id = ?`, [check.userId]);
+  await execute(`DELETE FROM sessions WHERE user_id = ?`, [check.userId]);
 
   return { ok: true, userId: check.userId };
 }
 
 /** Housekeeping: drop tokens that are spent or long expired. */
-export function pruneResetTokens() {
-  execute(
+export async function pruneResetTokens() {
+  await execute(
     `DELETE FROM password_reset_tokens WHERE used_at IS NOT NULL OR expires_at < ?`,
     [new Date(Date.now() - 24 * 3600_000).toISOString()],
   );

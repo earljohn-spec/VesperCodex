@@ -17,8 +17,8 @@ export function fail(message: string, status = 400, extra?: Record<string, unkno
  * Per-user rate limit for an authenticated route. Returns a 429 response when
  * the caller is over budget, or null to continue.
  */
-export function enforceLimit(kind: RateLimitKind, userId: string): Response | null {
-  const result = consume(kind, `user:${userId}`);
+export async function enforceLimit(kind: RateLimitKind, userId: string): Promise<Response | null> {
+  const result = await consume(kind, `user:${userId}`);
   if (result.allowed) return null;
   return NextResponse.json(
     {

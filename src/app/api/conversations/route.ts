@@ -13,11 +13,11 @@ const schema = z.object({
 export const GET = withUser(async (user, req: Request) => {
   const url = new URL(req.url);
   const includeArchived = url.searchParams.get("archived") === "true";
-  return ok({ conversations: listConversations(user.id, includeArchived) });
+  return ok({ conversations: await listConversations(user.id, includeArchived) });
 });
 
 export const POST = withUser(async (user, req: Request) => {
   const input = await parseBody(req, schema).catch(() => ({}));
-  const conversation = createConversation(user.id, input);
+  const conversation = await createConversation(user.id, input);
   return ok({ conversation }, 201);
 });

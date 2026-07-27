@@ -20,7 +20,7 @@ const createSchema = z.object({
 
 export const GET = withUser(async (user, req: Request) => {
   const url = new URL(req.url);
-  const entries = listEntries(user.id, {
+  const entries = await listEntries(user.id, {
     search: url.searchParams.get("search") ?? undefined,
     emotion: url.searchParams.get("emotion") ?? undefined,
     source: url.searchParams.get("source") ?? undefined,
@@ -36,6 +36,6 @@ export const POST = withUser(async (user, req: Request) => {
       fieldErrors: { body: "Write something first" },
     });
   }
-  const entry = createEntry(user.id, input);
+  const entry = await createEntry(user.id, input);
   return ok({ entry }, 201);
 });

@@ -14,10 +14,10 @@ export default async function BiometricsPage() {
 
   return (
     <BiometricsView
-      devices={listDevices(user.id)}
-      summary={biometricSummary(user.id)}
-      samples={listBiometrics(user.id, 24)}
-      recentSpikes={listInterventions(user.id, { limit: 6 })}
+      devices={await listDevices(user.id)}
+      summary={await biometricSummary(user.id)}
+      samples={await listBiometrics(user.id, 24)}
+      recentSpikes={await listInterventions(user.id, { limit: 6 })}
     />
   );
 }

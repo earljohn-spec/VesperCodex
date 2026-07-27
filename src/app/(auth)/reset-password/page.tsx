@@ -17,7 +17,7 @@ export default async function ResetPasswordPage({
   if (await getCurrentUser()) redirect("/dashboard");
 
   const { token } = await searchParams;
-  const check = token ? verifyResetToken(token) : ({ valid: false, reason: "unknown" } as const);
+  const check = token ? await verifyResetToken(token) : ({ valid: false, reason: "unknown" } as const);
 
   if (!check.valid) {
     const message =

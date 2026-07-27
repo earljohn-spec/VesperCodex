@@ -19,10 +19,10 @@ const schema = z.object({
 export const GET = withUser(async (user, req: Request) => {
   const url = new URL(req.url);
   const hours = Number(url.searchParams.get("hours") ?? 24);
-  return ok({ samples: listBiometrics(user.id, hours), summary: biometricSummary(user.id) });
+  return ok({ samples: await listBiometrics(user.id, hours), summary: await biometricSummary(user.id) });
 });
 
 export const POST = withUser(async (user, req: Request) => {
   const input = await parseBody(req, schema);
-  return ok({ sample: createBiometric(user.id, input), summary: biometricSummary(user.id) }, 201);
+  return ok({ sample: await createBiometric(user.id, input), summary: await biometricSummary(user.id) }, 201);
 });

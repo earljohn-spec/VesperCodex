@@ -17,10 +17,10 @@ export default async function ChatPage({
   if (!user) redirect("/login");
 
   const { c } = await searchParams;
-  const conversations = listConversations(user.id);
+  const conversations = await listConversations(user.id);
   const activeId = c && conversations.some((x) => x.id === c) ? c : conversations[0]?.id;
-  const messages = activeId ? listMessages(user.id, activeId) : [];
-  const ctx = buildContext(user);
+  const messages = activeId ? await listMessages(user.id, activeId) : [];
+  const ctx = await buildContext(user);
 
   return (
     <ChatView

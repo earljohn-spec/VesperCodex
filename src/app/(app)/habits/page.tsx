@@ -18,8 +18,8 @@ export default async function HabitsPage({
 
   return (
     <HabitsView
-      habits={listHabits(user.id, true)}
-      summary={habitSummary(user.id)}
+      habits={await listHabits(user.id, true)}
+      summary={await habitSummary(user.id)}
       openNew={sp.new === "1"}
     />
   );

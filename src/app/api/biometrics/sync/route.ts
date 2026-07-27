@@ -35,10 +35,10 @@ const schema = z.object({
 export const POST = withUser(async (user, req: Request) => {
   const input = await parseBody(req, schema).catch(() => ({}) as z.infer<typeof schema>);
 
-  const devices = listDevices(user.id).filter((d) => d.status !== "paused");
+  const devices = (await listDevices(user.id)).filter((d) => d.status !== "paused");
   const device = devices.find((d) => d.id === input.deviceId) ?? devices[0] ?? null;
-  const prev = latestBiometric(user.id);
-  const summary = biometricSummary(user.id);
+  const prev = await latestBiometric(user.id);
+  const summary = await biometricSummary(user.id);
 
   const restingHr = input.restingHr ?? prev?.restingHr ?? 56;
   const baseline = summary.baselineHrv || 58;
@@ -60,7 +60,7 @@ export const POST = withUser(async (user, req: Request) => {
     respiration = 12.4 + Math.max(0, (baseline - hrv) * 0.05) + Math.random();
   }
 
-  const sample = createBiometric(user.id, {
+  const sample = await createBiometric(user.id, {
     deviceId: device?.id ?? null,
     hrv: input.hrv ?? +hrv.toFixed(1),
     heartRate: input.heartRate ?? Math.round(heartRate),
@@ -69,7 +69,7 @@ export const POST = withUser(async (user, req: Request) => {
     steps: (prev?.steps ?? 0) + Math.floor(Math.random() * 220),
   });
 
-  if (device) updateDevice(user.id, device.id, { lastSyncAt: nowIso(), status: "connected" });
+  if (device) await updateDevice(user.id, device.id, { lastSyncAt: nowIso(), status: "connected" });
 
   execute(
     `INSERT INTO sync_events (id, user_id, resource, action, payload, status, created_at, synced_at)
@@ -93,18 +93,18 @@ export const POST = withUser(async (user, req: Request) => {
 
   if (sample.stressIndex >= SPIKE_THRESHOLD) {
     // don't stack suggestions — one open nudge at a time
-    const alreadyOpen = activeInterventions(user.id).some(
+    const alreadyOpen = (await activeInterventions(user.id)).some(
       (i) => Date.now() - new Date(i.triggeredAt).getTime() < 45 * 60_000,
     );
     if (!alreadyOpen) {
       const rec = recommendBreak(sample.stressIndex, hrvDelta);
-      intervention = createIntervention(user.id, { ...rec, biometricId: sample.id });
+      intervention = await createIntervention(user.id, { ...rec, biometricId: sample.id });
     }
   }
 
   return ok({
     sample,
-    summary: biometricSummary(user.id),
+    summary: await biometricSummary(user.id),
     intervention,
     spikeDetected: sample.stressIndex >= SPIKE_THRESHOLD,
   });

@@ -20,18 +20,18 @@ const updateSchema = z.object({
 
 export const GET = withUser(async (user, _req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
-  const entry = getEntry(user.id, id);
+  const entry = await getEntry(user.id, id);
   return entry ? ok({ entry }) : fail("Entry not found", 404);
 });
 
 export const PATCH = withUser(async (user, req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   const input = await parseBody(req, updateSchema);
-  const entry = updateEntry(user.id, id, input);
+  const entry = await updateEntry(user.id, id, input);
   return entry ? ok({ entry }) : fail("Entry not found", 404);
 });
 
 export const DELETE = withUser(async (user, _req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
-  return deleteEntry(user.id, id) ? ok({ deleted: id }) : fail("Entry not found", 404);
+  return await deleteEntry(user.id, id) ? ok({ deleted: id }) : fail("Entry not found", 404);
 });

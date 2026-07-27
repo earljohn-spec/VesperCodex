@@ -43,7 +43,7 @@ export async function changePasswordAction(
     return { fieldErrors };
   }
 
-  const row = queryOne<{ password_hash: string }>(
+  const row = await queryOne<{ password_hash: string }>(
     `SELECT password_hash FROM users WHERE id = ?`,
     [user.id],
   );
@@ -88,7 +88,7 @@ export async function deleteAccountAction(
     return { fieldErrors: { confirmation: 'Type DELETE to confirm.' } };
   }
 
-  const row = queryOne<{ password_hash: string }>(
+  const row = await queryOne<{ password_hash: string }>(
     `SELECT password_hash FROM users WHERE id = ?`,
     [user.id],
   );
@@ -96,7 +96,7 @@ export async function deleteAccountAction(
     return { fieldErrors: { password: "That password isn't right." } };
   }
 
-  deleteAccount(user.id);
+  await deleteAccount(user.id);
   await destroySession();
   redirect("/login?deleted=1");
 }

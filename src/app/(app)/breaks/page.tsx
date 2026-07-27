@@ -14,9 +14,9 @@ export default async function BreaksPage() {
 
   return (
     <BreaksView
-      interventions={listInterventions(user.id, { limit: 60 })}
-      summary={interventionSummary(user.id)}
-      stressNow={biometricSummary(user.id).stressNow}
+      interventions={await listInterventions(user.id, { limit: 60 })}
+      summary={await interventionSummary(user.id)}
+      stressNow={(await biometricSummary(user.id)).stressNow}
       library={BREAK_LIBRARY}
     />
   );

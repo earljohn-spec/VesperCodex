@@ -21,34 +21,34 @@ const schema = z.object({
 
 export const GET = withUser(async (user, _req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
-  if (!getConversation(user.id, id)) return fail("Conversation not found", 404);
-  return ok({ messages: listMessages(user.id, id) });
+  if (!await getConversation(user.id, id)) return fail("Conversation not found", 404);
+  return ok({ messages: await listMessages(user.id, id) });
 });
 
 export const POST = withUser(async (user, req: Request, ctx: Ctx) => {
   // The companion is the costliest thing we expose — cap it per user.
-  const limited = enforceLimit("chat", user.id);
+  const limited = await enforceLimit("chat", user.id);
   if (limited) return limited;
 
   const { id } = await ctx.params;
-  const conversation = getConversation(user.id, id);
+  const conversation = await getConversation(user.id, id);
   if (!conversation) return fail("Conversation not found", 404);
 
   const { content } = await parseBody(req, schema);
 
-  const userMessage = addMessage(user.id, id, { role: "user", content });
+  const userMessage = await addMessage(user.id, id, { role: "user", content });
 
   // Title an untitled conversation from its first user turn.
   if (conversation.title === "New conversation") {
     const title = content.replace(/\s+/g, " ").trim().slice(0, 52);
-    updateConversation(user.id, id, {
+    await updateConversation(user.id, id, {
       title: title.length < content.trim().length ? `${title}…` : title,
     });
   }
 
   const reply = await generateReply(user, id, content);
 
-  const assistantMessage = addMessage(user.id, id, {
+  const assistantMessage = await addMessage(user.id, id, {
     role: "assistant",
     content: reply.content,
     strategy: reply.strategy,
@@ -61,7 +61,7 @@ export const POST = withUser(async (user, req: Request, ctx: Ctx) => {
   if (reply.suggestBreak) {
     const lib = BREAK_LIBRARY[reply.suggestBreak.kind];
     const match = lib.find((b) => b.title === reply.suggestBreak!.title) ?? lib[0];
-    intervention = createIntervention(user.id, {
+    intervention = await createIntervention(user.id, {
       kind: reply.suggestBreak.kind,
       title: match.title,
       detail: match.detail,

@@ -19,10 +19,10 @@ export default async function JournalPage({
 
   return (
     <JournalView
-      entries={listEntries(user.id, { limit: 200 })}
-      stats={journalStats(user.id)}
-      trend={moodTrend(user.id, 30)}
-      emotions={emotionBreakdown(user.id, 30)}
+      entries={await listEntries(user.id, { limit: 200 })}
+      stats={await journalStats(user.id)}
+      trend={await moodTrend(user.id, 30)}
+      emotions={await emotionBreakdown(user.id, 30)}
       openNew={sp.new === "1"}
       focusEntry={sp.entry}
     />

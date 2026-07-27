@@ -19,18 +19,18 @@ const updateSchema = z.object({
 
 export const GET = withUser(async (user, _req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
-  const habit = getHabit(user.id, id);
+  const habit = await getHabit(user.id, id);
   return habit ? ok({ habit }) : fail("Habit not found", 404);
 });
 
 export const PATCH = withUser(async (user, req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   const input = await parseBody(req, updateSchema);
-  const habit = updateHabit(user.id, id, input);
+  const habit = await updateHabit(user.id, id, input);
   return habit ? ok({ habit }) : fail("Habit not found", 404);
 });
 
 export const DELETE = withUser(async (user, _req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
-  return deleteHabit(user.id, id) ? ok({ deleted: id }) : fail("Habit not found", 404);
+  return await deleteHabit(user.id, id) ? ok({ deleted: id }) : fail("Habit not found", 404);
 });

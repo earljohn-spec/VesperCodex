@@ -17,11 +17,11 @@ const schema = z.object({
 export const PATCH = withUser(async (user, req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   const input = await parseBody(req, schema);
-  const intervention = updateIntervention(user.id, id, input);
+  const intervention = await updateIntervention(user.id, id, input);
   return intervention ? ok({ intervention }) : fail("Break not found", 404);
 });
 
 export const DELETE = withUser(async (user, _req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
-  return deleteIntervention(user.id, id) ? ok({ deleted: id }) : fail("Break not found", 404);
+  return await deleteIntervention(user.id, id) ? ok({ deleted: id }) : fail("Break not found", 404);
 });

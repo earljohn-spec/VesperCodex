@@ -36,32 +36,32 @@ function map(r: Row): Intervention {
   };
 }
 
-export function listInterventions(
+export async function listInterventions(
   userId: string,
   opts: { status?: string; limit?: number } = {},
-): Intervention[] {
+): Promise<Intervention[]> {
   const clauses = ["user_id = ?"];
   const params: unknown[] = [userId];
   if (opts.status && opts.status !== "all") {
     clauses.push("status = ?");
     params.push(opts.status);
   }
-  return query<Row>(
+  return (await query<Row>(
     `SELECT * FROM interventions WHERE ${clauses.join(" AND ")} ORDER BY triggered_at DESC LIMIT ?`,
     [...params, opts.limit ?? 100],
-  ).map(map);
+  )).map(map);
 }
 
-export function activeInterventions(userId: string): Intervention[] {
-  return query<Row>(
+export async function activeInterventions(userId: string): Promise<Intervention[]> {
+  return (await query<Row>(
     `SELECT * FROM interventions WHERE user_id = ? AND status IN ('suggested','snoozed')
      ORDER BY triggered_at DESC LIMIT 10`,
     [userId],
-  ).map(map);
+  )).map(map);
 }
 
-export function getIntervention(userId: string, id: string): Intervention | null {
-  const r = queryOne<Row>(`SELECT * FROM interventions WHERE id = ? AND user_id = ?`, [id, userId]);
+export async function getIntervention(userId: string, id: string): Promise<Intervention | null> {
+  const r = await queryOne<Row>(`SELECT * FROM interventions WHERE id = ? AND user_id = ?`, [id, userId]);
   return r ? map(r) : null;
 }
 
@@ -76,10 +76,10 @@ export interface InterventionInput {
   triggeredAt?: string;
 }
 
-export function createIntervention(userId: string, input: InterventionInput): Intervention {
+export async function createIntervention(userId: string, input: InterventionInput): Promise<Intervention> {
   const id = newId("int");
   const ts = nowIso();
-  execute(
+  await execute(
     `INSERT INTO interventions (id, user_id, biometric_id, kind, title, detail, duration_sec, trigger_note, status, triggered_at, resolved_at, created_at, updated_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,NULL,?,?)`,
     [
@@ -97,15 +97,15 @@ export function createIntervention(userId: string, input: InterventionInput): In
       ts,
     ],
   );
-  return getIntervention(userId, id)!;
+  return (await getIntervention(userId, id))!;
 }
 
-export function updateIntervention(
+export async function updateIntervention(
   userId: string,
   id: string,
   input: Partial<InterventionInput>,
-): Intervention | null {
-  if (!getIntervention(userId, id)) return null;
+): Promise<Intervention | null> {
+  if (!await getIntervention(userId, id)) return null;
   const sets: string[] = [];
   const params: unknown[] = [];
   const push = (c: string, v: unknown) => {
@@ -122,17 +122,17 @@ export function updateIntervention(
     push("resolved_at", input.status === "suggested" ? null : nowIso());
   }
   push("updated_at", nowIso());
-  execute(`UPDATE interventions SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
+  await execute(`UPDATE interventions SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
     ...params,
     id,
     userId,
   ]);
-  return getIntervention(userId, id);
+  return await getIntervention(userId, id);
 }
 
-export function deleteIntervention(userId: string, id: string): boolean {
-  if (!getIntervention(userId, id)) return false;
-  execute(`DELETE FROM interventions WHERE id = ? AND user_id = ?`, [id, userId]);
+export async function deleteIntervention(userId: string, id: string): Promise<boolean> {
+  if (!await getIntervention(userId, id)) return false;
+  await execute(`DELETE FROM interventions WHERE id = ? AND user_id = ?`, [id, userId]);
   return true;
 }
 
@@ -144,25 +144,25 @@ export interface InterventionSummary {
   favoriteKind: string | null;
 }
 
-export function interventionSummary(userId: string): InterventionSummary {
+export async function interventionSummary(userId: string): Promise<InterventionSummary> {
   const since = new Date(Date.now() - 7 * 86400_000).toISOString();
   const active =
-    queryOne<{ c: number }>(
+    (await queryOne<{ c: number }>(
       `SELECT COUNT(*) c FROM interventions WHERE user_id = ? AND status IN ('suggested','snoozed')`,
       [userId],
-    )?.c ?? 0;
+    ))?.c ?? 0;
   const completed =
-    queryOne<{ c: number; s: number | null }>(
+    await queryOne<{ c: number; s: number | null }>(
       `SELECT COUNT(*) c, SUM(duration_sec) s FROM interventions
        WHERE user_id = ? AND status = 'completed' AND triggered_at >= ?`,
       [userId, since],
     ) ?? { c: 0, s: 0 };
   const total =
-    queryOne<{ c: number }>(
+    (await queryOne<{ c: number }>(
       `SELECT COUNT(*) c FROM interventions WHERE user_id = ? AND triggered_at >= ?`,
       [userId, since],
-    )?.c ?? 0;
-  const fav = queryOne<{ kind: string }>(
+    ))?.c ?? 0;
+  const fav = await queryOne<{ kind: string }>(
     `SELECT kind FROM interventions WHERE user_id = ? AND status = 'completed'
      GROUP BY kind ORDER BY COUNT(*) DESC LIMIT 1`,
     [userId],

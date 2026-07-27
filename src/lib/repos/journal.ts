@@ -38,10 +38,10 @@ function map(row: Row): JournalEntry {
   };
 }
 
-export function listEntries(
+export async function listEntries(
   userId: string,
   opts: { limit?: number; search?: string; emotion?: string; source?: string } = {},
-): JournalEntry[] {
+): Promise<JournalEntry[]> {
   const clauses = ["user_id = ?"];
   const params: unknown[] = [userId];
 
@@ -60,15 +60,15 @@ export function listEntries(
   }
 
   const limit = opts.limit ?? 200;
-  const rows = query<Row>(
+  const rows = await query<Row>(
     `SELECT * FROM journal_entries WHERE ${clauses.join(" AND ")} ORDER BY entry_date DESC LIMIT ?`,
     [...params, limit],
   );
   return rows.map(map);
 }
 
-export function getEntry(userId: string, id: string): JournalEntry | null {
-  const row = queryOne<Row>(`SELECT * FROM journal_entries WHERE id = ? AND user_id = ?`, [
+export async function getEntry(userId: string, id: string): Promise<JournalEntry | null> {
+  const row = await queryOne<Row>(`SELECT * FROM journal_entries WHERE id = ? AND user_id = ?`, [
     id,
     userId,
   ]);
@@ -87,10 +87,10 @@ export interface JournalInput {
   synced?: boolean;
 }
 
-export function createEntry(userId: string, input: JournalInput): JournalEntry {
+export async function createEntry(userId: string, input: JournalInput): Promise<JournalEntry> {
   const id = newId("jrn");
   const ts = nowIso();
-  execute(
+  await execute(
     `INSERT INTO journal_entries
       (id, user_id, title, body, mood_score, energy_score, emotions, source, transcript_ms, entry_date, created_at, updated_at, synced)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -110,15 +110,15 @@ export function createEntry(userId: string, input: JournalInput): JournalEntry {
       input.synced === false ? 0 : 1,
     ],
   );
-  return getEntry(userId, id)!;
+  return (await getEntry(userId, id))!;
 }
 
-export function updateEntry(
+export async function updateEntry(
   userId: string,
   id: string,
   input: Partial<JournalInput>,
-): JournalEntry | null {
-  const existing = getEntry(userId, id);
+): Promise<JournalEntry | null> {
+  const existing = await getEntry(userId, id);
   if (!existing) return null;
 
   const sets: string[] = [];
@@ -138,18 +138,18 @@ export function updateEntry(
   if (input.synced !== undefined) push("synced", input.synced ? 1 : 0);
   push("updated_at", nowIso());
 
-  execute(`UPDATE journal_entries SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
+  await execute(`UPDATE journal_entries SET ${sets.join(", ")} WHERE id = ? AND user_id = ?`, [
     ...params,
     id,
     userId,
   ]);
-  return getEntry(userId, id);
+  return await getEntry(userId, id);
 }
 
-export function deleteEntry(userId: string, id: string): boolean {
-  const existing = getEntry(userId, id);
+export async function deleteEntry(userId: string, id: string): Promise<boolean> {
+  const existing = await getEntry(userId, id);
   if (!existing) return false;
-  execute(`DELETE FROM journal_entries WHERE id = ? AND user_id = ?`, [id, userId]);
+  await execute(`DELETE FROM journal_entries WHERE id = ? AND user_id = ?`, [id, userId]);
   return true;
 }
 
@@ -162,12 +162,12 @@ export interface MoodTrendPoint {
   count: number;
 }
 
-export function moodTrend(userId: string, days = 30): MoodTrendPoint[] {
+export async function moodTrend(userId: string, days = 30): Promise<MoodTrendPoint[]> {
   const since = new Date();
   since.setDate(since.getDate() - (days - 1));
   since.setHours(0, 0, 0, 0);
 
-  const rows = query<{ entry_date: string; mood_score: number; energy_score: number }>(
+  const rows = await query<{ entry_date: string; mood_score: number; energy_score: number }>(
     `SELECT entry_date, mood_score, energy_score FROM journal_entries
      WHERE user_id = ? AND entry_date >= ? ORDER BY entry_date ASC`,
     [userId, since.toISOString()],
@@ -204,10 +204,10 @@ export interface EmotionCount {
   positive: boolean;
 }
 
-export function emotionBreakdown(userId: string, days = 30): EmotionCount[] {
+export async function emotionBreakdown(userId: string, days = 30): Promise<EmotionCount[]> {
   const since = new Date();
   since.setDate(since.getDate() - days);
-  const rows = query<{ emotions: string }>(
+  const rows = await query<{ emotions: string }>(
     `SELECT emotions FROM journal_entries WHERE user_id = ? AND entry_date >= ?`,
     [userId, since.toISOString()],
   );
@@ -240,11 +240,11 @@ export interface JournalStats {
   hardestDay: { date: string; mood: number } | null;
 }
 
-export function journalStats(userId: string): JournalStats {
+export async function journalStats(userId: string): Promise<JournalStats> {
   const total =
-    queryOne<{ c: number }>(`SELECT COUNT(*) as c FROM journal_entries WHERE user_id = ?`, [
+    (await queryOne<{ c: number }>(`SELECT COUNT(*) as c FROM journal_entries WHERE user_id = ?`, [
       userId,
-    ])?.c ?? 0;
+    ]))?.c ?? 0;
 
   const d30 = new Date();
   d30.setDate(d30.getDate() - 30);
@@ -253,35 +253,35 @@ export function journalStats(userId: string): JournalStats {
   const d14 = new Date();
   d14.setDate(d14.getDate() - 14);
 
-  const agg = (since: Date) =>
-    queryOne<{ c: number; m: number | null; e: number | null }>(
+  const agg = async (since: Date) =>
+    await queryOne<{ c: number; m: number | null; e: number | null }>(
       `SELECT COUNT(*) c, AVG(mood_score) m, AVG(energy_score) e
        FROM journal_entries WHERE user_id = ? AND entry_date >= ?`,
       [userId, since.toISOString()],
     );
 
-  const a30 = agg(d30);
-  const a7 = agg(d7);
-  const prev7 = queryOne<{ m: number | null }>(
+  const a30 = await agg(d30);
+  const a7 = await agg(d7);
+  const prev7 = await queryOne<{ m: number | null }>(
     `SELECT AVG(mood_score) m FROM journal_entries
      WHERE user_id = ? AND entry_date >= ? AND entry_date < ?`,
     [userId, d14.toISOString(), d7.toISOString()],
   );
 
   const voice =
-    queryOne<{ c: number }>(
+    (await queryOne<{ c: number }>(
       `SELECT COUNT(*) c FROM journal_entries WHERE user_id = ? AND source = 'voice' AND entry_date >= ?`,
       [userId, d30.toISOString()],
-    )?.c ?? 0;
+    ))?.c ?? 0;
 
   const pending =
-    queryOne<{ c: number }>(
+    (await queryOne<{ c: number }>(
       `SELECT COUNT(*) c FROM journal_entries WHERE user_id = ? AND synced = 0`,
       [userId],
-    )?.c ?? 0;
+    ))?.c ?? 0;
 
   // streak of consecutive days with an entry
-  const dayRows = query<{ d: string }>(
+  const dayRows = await query<{ d: string }>(
     `SELECT DISTINCT substr(entry_date, 1, 10) d FROM journal_entries
      WHERE user_id = ? ORDER BY d DESC LIMIT 400`,
     [userId],
@@ -295,12 +295,12 @@ export function journalStats(userId: string): JournalStats {
     cursor.setDate(cursor.getDate() - 1);
   }
 
-  const best = queryOne<{ d: string; m: number }>(
+  const best = await queryOne<{ d: string; m: number }>(
     `SELECT substr(entry_date,1,10) d, AVG(mood_score) m FROM journal_entries
      WHERE user_id = ? AND entry_date >= ? GROUP BY d ORDER BY m DESC LIMIT 1`,
     [userId, d30.toISOString()],
   );
-  const worst = queryOne<{ d: string; m: number }>(
+  const worst = await queryOne<{ d: string; m: number }>(
     `SELECT substr(entry_date,1,10) d, AVG(mood_score) m FROM journal_entries
      WHERE user_id = ? AND entry_date >= ? GROUP BY d ORDER BY m ASC LIMIT 1`,
     [userId, d30.toISOString()],
@@ -325,13 +325,13 @@ export function journalStats(userId: string): JournalStats {
 }
 
 /** Which hour of day tends to carry the lowest mood — used by the companion. */
-export function roughPatterns(userId: string) {
-  const rows = query<{ h: string; m: number; c: number }>(
+export async function roughPatterns(userId: string) {
+  const rows = await query<{ h: string; m: number; c: number }>(
     `SELECT substr(entry_date, 12, 2) h, AVG(mood_score) m, COUNT(*) c
      FROM journal_entries WHERE user_id = ? GROUP BY h HAVING c >= 2 ORDER BY m ASC`,
     [userId],
   );
-  const weekday = query<{ w: string; m: number; c: number }>(
+  const weekday = await query<{ w: string; m: number; c: number }>(
     `SELECT strftime('%w', entry_date) w, AVG(mood_score) m, COUNT(*) c
      FROM journal_entries WHERE user_id = ? GROUP BY w HAVING c >= 2 ORDER BY m ASC`,
     [userId],

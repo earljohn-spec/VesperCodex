@@ -16,11 +16,11 @@ const schema = z.object({
 export const PATCH = withUser(async (user, req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
   const input = await parseBody(req, schema);
-  const device = updateDevice(user.id, id, input);
+  const device = await updateDevice(user.id, id, input);
   return device ? ok({ device }) : fail("Device not found", 404);
 });
 
 export const DELETE = withUser(async (user, _req: Request, ctx: Ctx) => {
   const { id } = await ctx.params;
-  return deleteDevice(user.id, id) ? ok({ deleted: id }) : fail("Device not found", 404);
+  return await deleteDevice(user.id, id) ? ok({ deleted: id }) : fail("Device not found", 404);
 });

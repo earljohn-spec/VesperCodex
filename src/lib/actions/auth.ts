@@ -77,19 +77,19 @@ export async function loginAction(_prev: AuthState, formData: FormData): Promise
 
   // Limit per-IP and per-account: one stops a spray from a single host, the
   // other stops a distributed attack focused on one inbox.
-  const byIp = consume("login", await ip());
+  const byIp = await consume("login", await ip());
   if (!byIp.allowed) return tooMany(byIp.retryAfter);
-  const byAccount = consume("login", `acct:${email}`);
+  const byAccount = await consume("login", `acct:${email}`);
   if (!byAccount.allowed) return tooMany(byAccount.retryAfter);
 
-  const row = findUserByEmail(email);
+  const row = await findUserByEmail(email);
   if (!row || !verifyPassword(parsed.data.password, row.password_hash)) {
     return { error: "That email and password combination doesn't match our records." };
   }
 
   // Clear the counters so a successful sign-in isn't penalised later.
-  reset("login", await ip());
-  reset("login", `acct:${email}`);
+  await reset("login", await ip());
+  await reset("login", `acct:${email}`);
 
   await createSession(row.id);
   redirect("/dashboard");
@@ -109,15 +109,15 @@ export async function signupAction(_prev: AuthState, formData: FormData): Promis
     return { fieldErrors };
   }
 
-  const gate = consume("signup", await ip());
+  const gate = await consume("signup", await ip());
   if (!gate.allowed) return tooMany(gate.retryAfter);
 
-  if (findUserByEmail(parsed.data.email)) {
+  if (await findUserByEmail(parsed.data.email)) {
     return { fieldErrors: { email: "An account with this email already exists." } };
   }
 
-  const row = createUser(parsed.data);
-  seedStarterContent(row.id, row.name);
+  const row = await createUser(parsed.data);
+  await seedStarterContent(row.id, row.name);
   await createSession(row.id);
   redirect("/dashboard");
 }
@@ -135,11 +135,11 @@ export async function requestPasswordResetAction(
     return { fieldErrors: { email: parsed.error.issues[0]!.message } };
   }
 
-  const gate = consume("passwordReset", await ip());
+  const gate = await consume("passwordReset", await ip());
   if (!gate.allowed) return tooMany(gate.retryAfter);
 
   const email = parsed.data.email.toLowerCase().trim();
-  const row = findUserByEmail(email);
+  const row = await findUserByEmail(email);
 
   // Always report success. Telling an anonymous visitor whether an address is
   // registered leaks who uses a mental-health app.
@@ -150,7 +150,7 @@ export async function requestPasswordResetAction(
 
   if (!row) return generic;
 
-  const { token } = issueResetToken(row.id);
+  const { token } = await issueResetToken(row.id);
   const { link } = await deliverResetEmail(email, token, await origin());
 
   // Surfaced in the UI only outside production, so the flow is testable
@@ -184,10 +184,10 @@ export async function confirmPasswordResetAction(
     return { fieldErrors };
   }
 
-  const gate = consume("passwordResetConfirm", await ip());
+  const gate = await consume("passwordResetConfirm", await ip());
   if (!gate.allowed) return tooMany(gate.retryAfter);
 
-  const outcome = completeReset(parsed.data.token, parsed.data.password);
+  const outcome = await completeReset(parsed.data.token, parsed.data.password);
   if (!outcome.ok) {
     const message =
       outcome.reason === "expired"
@@ -203,7 +203,7 @@ export async function confirmPasswordResetAction(
 
 /** Server-side check so the reset page can show a useful state before submit. */
 export async function checkResetTokenAction(token: string) {
-  const result = verifyResetToken(token);
+  const result = await verifyResetToken(token);
   return result.valid ? { valid: true as const } : { valid: false as const, reason: result.reason };
 }
 
@@ -215,19 +215,19 @@ export async function logoutAction() {
 }
 
 export async function demoLoginAction(): Promise<void> {
-  let row = findUserByEmail("maya@vesper.app");
+  let row = await findUserByEmail("maya@vesper.app");
 
   // If the database was never seeded (e.g. `next dev` run directly instead of
   // `npm run dev`), create the demo account on the fly rather than erroring.
   if (!row) {
-    row = createUser({
+    row = await createUser({
       email: "maya@vesper.app",
       name: "Maya Okonkwo",
       password: "wellness123",
       focusAreas: ["burnout recovery", "sleep", "boundaries at work"],
       timezone: "Europe/London",
     });
-    seedStarterContent(row.id, row.name);
+    await seedStarterContent(row.id, row.name);
   }
 
   await createSession(row.id);

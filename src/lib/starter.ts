@@ -7,7 +7,7 @@ import { execute, newId, nowIso } from "./db";
  * simulated wearable so the biometrics screen has something to show — all
  * clearly *their* data from minute one, with no fabricated history.
  */
-export function seedStarterContent(userId: string, name: string) {
+export async function seedStarterContent(userId: string, name: string) {
   const ts = nowIso();
   const firstName = name.split(" ")[0] || "there";
 
@@ -42,7 +42,7 @@ export function seedStarterContent(userId: string, name: string) {
   ];
 
   for (const h of habits) {
-    execute(
+    await execute(
       `INSERT INTO habits (id, user_id, name, description, icon, color, cadence, target_per_week, reminder_time, archived, created_at, updated_at)
        VALUES (?,?,?,?,?,?,?,?,?,0,?,?)`,
       [newId("hab"), userId, h.name, h.description, h.icon, h.color, h.cadence, h.target, h.reminder, ts, ts],
@@ -50,7 +50,7 @@ export function seedStarterContent(userId: string, name: string) {
   }
 
   const deviceId = newId("dev");
-  execute(
+  await execute(
     `INSERT INTO devices (id, user_id, provider, display_name, status, battery, last_sync_at, created_at, updated_at)
      VALUES (?,?,?,?,?,?,?,?,?)`,
     [deviceId, userId, "apple_watch", "Apple Watch (simulated)", "connected", 84, ts, ts, ts],
@@ -67,7 +67,7 @@ export function seedStarterContent(userId: string, name: string) {
     let stress = Math.max(0, Math.min(55, (1 - hrv / 58) * 110));
     stress += Math.max(0, Math.min(30, (hr - restingHr) * 0.9));
     stress += Math.max(0, Math.min(15, (respiration - 13) * 3));
-    execute(
+    await execute(
       `INSERT INTO biometrics (id, user_id, device_id, recorded_at, hrv, resting_hr, heart_rate, respiration, sleep_hours, steps, stress_index, created_at)
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
@@ -88,12 +88,12 @@ export function seedStarterContent(userId: string, name: string) {
   }
 
   const convId = newId("cnv");
-  execute(
+  await execute(
     `INSERT INTO conversations (id, user_id, title, summary, pinned, archived, created_at, updated_at)
      VALUES (?,?,?,?,0,0,?,?)`,
     [convId, userId, "Getting started", "First conversation with Vesper.", ts, ts],
   );
-  execute(
+  await execute(
     `INSERT INTO messages (id, conversation_id, user_id, role, content, strategy, context_used, created_at)
      VALUES (?,?,?,?,?,?,?,?)`,
     [
@@ -108,7 +108,7 @@ export function seedStarterContent(userId: string, name: string) {
     ],
   );
 
-  execute(
+  await execute(
     `INSERT INTO memories (id, user_id, kind, label, detail, weight, last_seen_at, created_at)
      VALUES (?,?,?,?,?,?,?,?)`,
     [

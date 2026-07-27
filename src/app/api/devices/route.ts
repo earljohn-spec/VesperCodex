@@ -12,9 +12,9 @@ const schema = z.object({
   battery: z.number().int().min(0).max(100).nullable().optional(),
 });
 
-export const GET = withUser(async (user) => ok({ devices: listDevices(user.id) }));
+export const GET = withUser(async (user) => ok({ devices: await listDevices(user.id) }));
 
 export const POST = withUser(async (user, req: Request) => {
   const input = await parseBody(req, schema);
-  return ok({ device: createDevice(user.id, input) }, 201);
+  return ok({ device: await createDevice(user.id, input) }, 201);
 });

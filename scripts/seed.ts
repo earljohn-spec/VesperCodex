@@ -7,13 +7,10 @@
  * sleep, habits, and conversations all reflect the same arc so every chart
  * tells a consistent story.
  */
-import { DatabaseSync } from "node:sqlite";
-import fs from "node:fs";
-import path from "node:path";
+import "./_shim";
 import { scryptSync, randomBytes } from "node:crypto";
+import { execute, query, driver } from "../src/lib/db";
 
-const DATA_DIR = process.env.VESPER_DATA_DIR ?? path.join(process.cwd(), ".data");
-const DB_PATH = process.env.VESPER_DB_PATH ?? path.join(DATA_DIR, "vesper.db");
 
 /* --------------------------- deterministic RNG -------------------------- */
 let seedState = 20260726;
@@ -49,17 +46,6 @@ function daysAgo(n: number, hour = 9, minute = 0) {
   d.setDate(d.getDate() - n);
   d.setHours(hour, minute, 0, 0);
   return d;
-}
-
-/* ------------------------------- schema --------------------------------- */
-
-const SCHEMA_FILE = path.join(process.cwd(), "src", "lib", "db.ts");
-
-function loadSchema(): string {
-  const src = fs.readFileSync(SCHEMA_FILE, "utf8");
-  const m = src.match(/const SCHEMA = `([\s\S]*?)`;/);
-  if (!m) throw new Error("Could not extract SCHEMA from src/lib/db.ts");
-  return m[1];
 }
 
 /* ------------------------------ narrative -------------------------------- */
@@ -176,21 +162,16 @@ const VOICE_TEMPLATES = [
 
 /* --------------------------------- run ----------------------------------- */
 
-function main() {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  const db = new DatabaseSync(DB_PATH);
-  db.exec("PRAGMA journal_mode = WAL;");
-  db.exec("PRAGMA foreign_keys = ON;");
-  db.exec(loadSchema());
+async function main() {
 
   const email = "maya@vesper.app";
 
   // Wipe any prior demo user so the seed is idempotent.
-  const existing = db.prepare(`SELECT id FROM users WHERE email = ?`).get(email) as
+  const existing = (await query(`SELECT id FROM users WHERE email = ?`, [email]))[0] as
     | { id: string }
     | undefined;
   if (existing) {
-    db.prepare(`DELETE FROM users WHERE id = ?`).run(existing.id);
+    await execute(`DELETE FROM users WHERE id = ?`, [existing.id]);
     console.log("· cleared previous demo account");
   }
 
@@ -198,11 +179,8 @@ function main() {
   const now = new Date().toISOString();
   const createdAt = daysAgo(DAYS + 4).toISOString();
 
-  db.prepare(
-    `INSERT INTO users (id, email, name, password_hash, avatar_hue, timezone, focus_areas, onboarded, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,1,?,?)`,
-  ).run(
-    userId,
+  await execute(`INSERT INTO users (id, email, name, password_hash, avatar_hue, timezone, focus_areas, onboarded, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,1,?,?)`, [userId,
     email,
     "Maya Okonkwo",
     hashPassword("wellness123"),
@@ -210,8 +188,7 @@ function main() {
     "Europe/London",
     JSON.stringify(["burnout recovery", "sleep", "boundaries at work"]),
     createdAt,
-    now,
-  );
+    now,]);
   console.log("✓ demo user  maya@vesper.app / wellness123");
 
   /* ------------------------------ devices ------------------------------- */
@@ -224,10 +201,8 @@ function main() {
     [oura, "oura", "Oura Ring Gen 3", "paused", 88, daysAgo(6, 7)],
   ] as const;
   for (const [devId, provider, name, status, battery, sync] of devices) {
-    db.prepare(
-      `INSERT INTO devices (id, user_id, provider, display_name, status, battery, last_sync_at, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?)`,
-    ).run(devId, userId, provider, name, status, battery, sync.toISOString(), createdAt, now);
+    await execute(`INSERT INTO devices (id, user_id, provider, display_name, status, battery, last_sync_at, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?,?)`, [devId, userId, provider, name, status, battery, sync.toISOString(), createdAt, now]);
   }
   console.log(`✓ ${devices.length} connected devices`);
 
@@ -299,11 +274,8 @@ function main() {
   for (const h of habitDefs) {
     const hid = id("hab");
     habitIds[h.name] = hid;
-    db.prepare(
-      `INSERT INTO habits (id, user_id, name, description, icon, color, cadence, target_per_week, reminder_time, archived, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?,?,0,?,?)`,
-    ).run(
-      hid,
+    await execute(`INSERT INTO habits (id, user_id, name, description, icon, color, cadence, target_per_week, reminder_time, archived, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?,?,0,?,?)`, [hid,
       userId,
       h.name,
       h.description,
@@ -313,15 +285,11 @@ function main() {
       h.target,
       h.reminder,
       createdAt,
-      now,
-    );
+      now,]);
   }
   // one archived habit, so the archive filter has something to show
-  db.prepare(
-    `INSERT INTO habits (id, user_id, name, description, icon, color, cadence, target_per_week, reminder_time, archived, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,1,?,?)`,
-  ).run(
-    id("hab"),
+  await execute(`INSERT INTO habits (id, user_id, name, description, icon, color, cadence, target_per_week, reminder_time, archived, created_at, updated_at)
+     VALUES (?,?,?,?,?,?,?,?,?,1,?,?)`, [id("hab"),
     userId,
     "Cold shower",
     "Tried it for three weeks. Made mornings worse, not better — parked it.",
@@ -331,8 +299,7 @@ function main() {
     7,
     null,
     daysAgo(50).toISOString(),
-    daysAgo(29).toISOString(),
-  );
+    daysAgo(29).toISOString(),]);
 
   let logCount = 0;
   for (const h of habitDefs) {
@@ -353,10 +320,8 @@ function main() {
       if (ago === 0 && !["Box breathing", "Morning walk"].includes(h.name)) continue;
 
       if (chance(Math.min(0.97, h.strength * modifier))) {
-        db.prepare(
-          `INSERT OR IGNORE INTO habit_logs (id, habit_id, user_id, log_date, completed, note, created_at)
-           VALUES (?,?,?,?,1,?,?)`,
-        ).run(id("hlg"), habitIds[h.name], userId, dateKey(d), "", d.toISOString());
+        await execute(`INSERT OR IGNORE INTO habit_logs (id, habit_id, user_id, log_date, completed, note, created_at)
+           VALUES (?,?,?,?,1,?,?)`, [id("hlg"), habitIds[h.name], userId, dateKey(d), "", d.toISOString()]);
         logCount++;
       }
     }
@@ -403,12 +368,9 @@ function main() {
     // a couple of recent entries are captured offline and still pending sync
     const pending = ago <= 2 && chance(0.3);
 
-    db.prepare(
-      `INSERT INTO journal_entries
+    await execute(`INSERT INTO journal_entries
         (id, user_id, title, body, mood_score, energy_score, emotions, source, transcript_ms, entry_date, created_at, updated_at, synced)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    ).run(
-      id("jrn"),
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`, [id("jrn"),
       userId,
       title,
       body,
@@ -420,8 +382,7 @@ function main() {
       entryDate.toISOString(),
       entryDate.toISOString(),
       entryDate.toISOString(),
-      pending ? 0 : 1,
-    );
+      pending ? 0 : 1,]);
     entryCount++;
   }
   console.log(`✓ ${entryCount} journal entries (60-day mood arc)`);
@@ -435,7 +396,7 @@ function main() {
   //
   const BASELINE_HRV = 58;
 
-  function insertSample(opts: {
+  async function insertSample(opts: {
     recordedAt: Date;
     hrv: number;
     restingHr: number;
@@ -449,11 +410,8 @@ function main() {
     stress += Math.max(0, Math.min(15, (opts.respiration - 13) * 3));
     stress = Math.round(Math.max(0, Math.min(100, stress)));
 
-    db.prepare(
-      `INSERT INTO biometrics (id, user_id, device_id, recorded_at, hrv, resting_hr, heart_rate, respiration, sleep_hours, steps, stress_index, created_at)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    ).run(
-      id("bio"),
+    await execute(`INSERT INTO biometrics (id, user_id, device_id, recorded_at, hrv, resting_hr, heart_rate, respiration, sleep_hours, steps, stress_index, created_at)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`, [id("bio"),
       userId,
       chance(0.75) ? appleWatch : fitbit,
       opts.recordedAt.toISOString(),
@@ -464,8 +422,7 @@ function main() {
       opts.sleep ?? null,
       opts.steps ?? null,
       stress,
-      opts.recordedAt.toISOString(),
-    );
+      opts.recordedAt.toISOString(),]);
     return stress;
   }
 
@@ -482,7 +439,7 @@ function main() {
       const recordedAt = daysAgo(ago, hour, intBetween(0, 55));
       // intraday shape: dips during the mid-morning and mid-afternoon blocks
       const meetingLoad = hour === 11 || hour === 15 ? 1 : hour === 9 || hour === 13 ? 0.55 : 0;
-      insertSample({
+      await insertSample({
         recordedAt,
         hrv: Math.max(14, dayHrv - meetingLoad * between(9, 18) + between(-4, 4)),
         restingHr,
@@ -506,7 +463,7 @@ function main() {
   const wake = new Date(nowDate);
   wake.setHours(7, 12, 0, 0);
   if (wake.getTime() < nowDate.getTime()) {
-    insertSample({
+    await insertSample({
       recordedAt: wake,
       hrv: todayHrv + between(2, 6),
       restingHr: todayResting,
@@ -526,7 +483,7 @@ function main() {
     const h = cursor.getHours();
     const meetingLoad = h === 11 || h === 15 ? 1 : h === 9 || h === 13 ? 0.55 : 0.15;
     cumulativeSteps += intBetween(300, 1100);
-    insertSample({
+    await insertSample({
       recordedAt: new Date(cursor),
       hrv: Math.max(16, todayHrv - meetingLoad * between(8, 16) + between(-3, 3)),
       restingHr: todayResting,
@@ -548,7 +505,7 @@ function main() {
   let liveStress = 0;
   for (const s of spikeSamples) {
     cumulativeSteps += intBetween(10, 90);
-    liveStress = insertSample({
+    liveStress = await insertSample({
       recordedAt: new Date(nowDate.getTime() - s.minsAgo * 60_000),
       hrv: Math.max(15, todayHrv - s.hrvDrop),
       restingHr: todayResting,
@@ -589,11 +546,8 @@ function main() {
         : ago <= 1 && chance(0.35)
           ? "snoozed"
           : "dismissed";
-      db.prepare(
-        `INSERT INTO interventions (id, user_id, biometric_id, kind, title, detail, duration_sec, trigger_note, status, triggered_at, resolved_at, created_at, updated_at)
-         VALUES (?,?,NULL,?,?,?,?,?,?,?,?,?,?)`,
-      ).run(
-        id("int"),
+      await execute(`INSERT INTO interventions (id, user_id, biometric_id, kind, title, detail, duration_sec, trigger_note, status, triggered_at, resolved_at, created_at, updated_at)
+         VALUES (?,?,NULL,?,?,?,?,?,?,?,?,?,?)`, [id("int"),
         userId,
         kind,
         title,
@@ -604,19 +558,15 @@ function main() {
         triggered.toISOString(),
         new Date(triggered.getTime() + duration * 1000).toISOString(),
         triggered.toISOString(),
-        triggered.toISOString(),
-      );
+        triggered.toISOString(),]);
       intCount++;
     }
   }
 
   // The one live suggestion — reacting to the stress spike seeded above.
   const spikeAt = new Date(Date.now() - 11 * 60_000);
-  db.prepare(
-    `INSERT INTO interventions (id, user_id, biometric_id, kind, title, detail, duration_sec, trigger_note, status, triggered_at, resolved_at, created_at, updated_at)
-     VALUES (?,?,NULL,?,?,?,?,?,'suggested',?,NULL,?,?)`,
-  ).run(
-    id("int"),
+  await execute(`INSERT INTO interventions (id, user_id, biometric_id, kind, title, detail, duration_sec, trigger_note, status, triggered_at, resolved_at, created_at, updated_at)
+     VALUES (?,?,NULL,?,?,?,?,?,'suggested',?,NULL,?,?)`, [id("int"),
     userId,
     "breathing",
     "Box breathing · 4-4-4-4",
@@ -625,8 +575,7 @@ function main() {
     `Stress index ${liveStress}/100 — HRV dropped 17ms in the last half hour`,
     spikeAt.toISOString(),
     spikeAt.toISOString(),
-    now,
-  );
+    now,]);
   intCount++;
   console.log(`✓ ${intCount} micro-break interventions`);
 
@@ -645,19 +594,15 @@ function main() {
     ["milestone", "14-day breathing streak", "Longest consistency run so far; happened during the recovery stretch.", 1.9],
   ] as const;
   for (const [kind, label, detail, weight] of memories) {
-    db.prepare(
-      `INSERT INTO memories (id, user_id, kind, label, detail, weight, last_seen_at, created_at)
-       VALUES (?,?,?,?,?,?,?,?)`,
-    ).run(
-      id("mem"),
+    await execute(`INSERT INTO memories (id, user_id, kind, label, detail, weight, last_seen_at, created_at)
+       VALUES (?,?,?,?,?,?,?,?)`, [id("mem"),
       userId,
       kind,
       label,
       detail,
       weight,
       daysAgo(intBetween(0, 12)).toISOString(),
-      daysAgo(intBetween(20, 55)).toISOString(),
-    );
+      daysAgo(intBetween(20, 55)).toISOString(),]);
   }
   console.log(`✓ ${memories.length} companion memories`);
 
@@ -779,35 +724,27 @@ function main() {
   for (const conv of conversations) {
     const cid = id("cnv");
     const start = daysAgo(conv.ago, intBetween(9, 21), intBetween(0, 59));
-    db.prepare(
-      `INSERT INTO conversations (id, user_id, title, summary, pinned, archived, created_at, updated_at)
-       VALUES (?,?,?,?,?,?,?,?)`,
-    ).run(
-      cid,
+    await execute(`INSERT INTO conversations (id, user_id, title, summary, pinned, archived, created_at, updated_at)
+       VALUES (?,?,?,?,?,?,?,?)`, [cid,
       userId,
       conv.title,
       conv.summary,
       conv.pinned ? 1 : 0,
       conv.archived ? 1 : 0,
       start.toISOString(),
-      new Date(start.getTime() + conv.turns.length * 90_000).toISOString(),
-    );
-    conv.turns.forEach(([role, content, strategy], i) => {
-      db.prepare(
-        `INSERT INTO messages (id, conversation_id, user_id, role, content, strategy, context_used, created_at)
-         VALUES (?,?,?,?,?,?,?,?)`,
-      ).run(
-        id("msg"),
+      new Date(start.getTime() + conv.turns.length * 90_000).toISOString(),]);
+    for (const [i, [role, content, strategy]] of conv.turns.entries()) {
+      await execute(`INSERT INTO messages (id, conversation_id, user_id, role, content, strategy, context_used, created_at)
+         VALUES (?,?,?,?,?,?,?,?)`, [id("msg"),
         cid,
         userId,
         role,
         content,
         strategy,
         JSON.stringify(role === "assistant" ? ["mood-trend", "biometrics"] : []),
-        new Date(start.getTime() + i * 90_000).toISOString(),
-      );
+        new Date(start.getTime() + i * 90_000).toISOString(),]);
       msgCount++;
-    });
+    }
   }
   console.log(`✓ ${conversations.length} conversations, ${msgCount} messages`);
 
@@ -824,25 +761,24 @@ function main() {
   ] as const;
   for (const [resource, action, status, hoursAgo] of syncEvents) {
     const at = new Date(Date.now() - hoursAgo * 3600_000);
-    db.prepare(
-      `INSERT INTO sync_events (id, user_id, resource, action, payload, status, created_at, synced_at)
-       VALUES (?,?,?,?,?,?,?,?)`,
-    ).run(
-      id("syn"),
+    await execute(`INSERT INTO sync_events (id, user_id, resource, action, payload, status, created_at, synced_at)
+       VALUES (?,?,?,?,?,?,?,?)`, [id("syn"),
       userId,
       resource,
       action,
       JSON.stringify({ source: chance(0.5) ? "apple_watch" : "app", offline: status === "pending" }),
       status,
       at.toISOString(),
-      status === "synced" ? new Date(at.getTime() + 4000).toISOString() : null,
-    );
+      status === "synced" ? new Date(at.getTime() + 4000).toISOString() : null,]);
   }
   console.log(`✓ ${syncEvents.length} sync events`);
 
-  db.close();
-  console.log(`\n✨ Seed complete → ${DB_PATH}`);
+  
+  console.log(`\n✨ Seed complete (${driver})`);
   console.log(`   Sign in with  maya@vesper.app  /  wellness123\n`);
 }
 
-main();
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});
