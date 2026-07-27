@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { biometricSummary, listBiometrics, listDevices } from "@/lib/repos/biometrics";
 import { listInterventions } from "@/lib/repos/interventions";
-import { fitbitConfigured, getConnection } from "@/lib/fitbit";
+import { googleHealthConfigured, getConnection } from "@/lib/google-health";
 import { BiometricsView } from "./biometrics-view";
 
 export const metadata: Metadata = { title: "Biometrics" };
@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function BiometricsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ fitbit?: string }>;
+  searchParams: Promise<{ health?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
@@ -22,14 +22,14 @@ export default async function BiometricsPage({
 
   return (
     <BiometricsView
-      fitbitConfigured={fitbitConfigured()}
-      fitbitStatus={{
+      healthConfigured={googleHealthConfigured()}
+      healthStatus={{
         connected: !!conn,
         scopes: conn?.scopes ?? null,
         lastSyncAt: conn?.lastSyncAt ?? null,
         lastError: conn?.lastError ?? null,
       }}
-      fitbitCallback={sp.fitbit}
+      healthCallback={sp.health}
       devices={await listDevices(user.id)}
       summary={await biometricSummary(user.id)}
       samples={await listBiometrics(user.id, 24)}

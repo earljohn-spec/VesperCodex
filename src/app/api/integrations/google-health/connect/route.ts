@@ -1,19 +1,18 @@
 import { NextResponse } from "next/server";
 import { fail, withUser } from "@/lib/api";
-import { beginAuthorization, fitbitConfigured } from "@/lib/fitbit";
+import { beginAuthorization, googleHealthConfigured } from "@/lib/google-health";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Kicks off the Fitbit OAuth flow. */
+/** Kicks off the Google Health OAuth flow. */
 export const GET = withUser(async (user, req: Request) => {
-  if (!fitbitConfigured()) {
+  if (!googleHealthConfigured()) {
     return fail(
-      "Fitbit isn't configured on this server. Set FITBIT_CLIENT_ID and FITBIT_CLIENT_SECRET.",
+      "Google Health isn't configured on this server. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.",
       503,
     );
   }
-
   const origin = new URL(req.url).origin;
   const { url } = await beginAuthorization(user.id, origin);
   return NextResponse.redirect(url);

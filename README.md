@@ -119,7 +119,7 @@ npm run test        # security tests: rate limiting, reset, deletion
 npm run test:pg     # Postgres schema + query compatibility (via PGlite)
 npm run test:mail   # email templates + real SMTP delivery
 npm run test:verify # email verification lifecycle
-npm run test:fitbit # Fitbit OAuth, token encryption, API mapping
+npm run test:googlehealth # Google Health OAuth, encryption, API mapping
 npx tsx scripts/check.ts   # print derived stats for the demo account
 ```
 
@@ -253,17 +253,24 @@ What it buys us is confidence that a password reset can actually reach the
 account. Anything genuinely sensitive already requires the password. Settings
 shows the status and can resend, rate-limited to 4 per hour.
 
-### Fitbit
+### Fitbit / Pixel Watch data
 
-Set `FITBIT_CLIENT_ID` and `FITBIT_CLIENT_SECRET` (see `.env.example`) and the
-Biometrics page gains a **Connect Fitbit** button. Vesper requests only
-heartrate, activity, sleep and profile, pulls on demand rather than streaming,
-and stores OAuth tokens encrypted with AES-256-GCM — a leaked database alone
-doesn't expose anyone's heart-rate history.
+Google closed the legacy Fitbit developer portal and turns that API off in
+**September 2026**, so Vesper integrates with its replacement, the
+**Google Health API** — same devices, Google OAuth 2.0 instead of Fitbit's.
+
+Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (see `.env.example`) and the
+Biometrics page gains a **Connect Google Health** button. Vesper requests only
+read-only health-metric, activity and sleep scopes, pulls on demand rather than
+streaming, and stores OAuth tokens encrypted with AES-256-GCM.
+
+Every Google Health scope is *Restricted*, meaning production access needs a
+Google security review — but up to **100 manually-added test users** work
+without one, which is plenty for development and a private beta.
 
 Without credentials the page says so plainly and keeps using simulated
-readings. `npm run test:fitbit` runs the whole flow against a local mock of
-Fitbit's documented response shapes.
+readings. `npm run test:googlehealth` runs the whole flow against a local mock
+of Google's documented v4 response shapes.
 
 **Still not implemented**
 - Apple HealthKit — needs a native iOS companion app, so it's a bigger piece

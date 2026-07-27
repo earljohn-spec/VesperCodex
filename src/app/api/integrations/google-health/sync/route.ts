@@ -1,12 +1,12 @@
 import { enforceLimit, fail, ok, withUser } from "@/lib/api";
 import {
+  disconnect,
   ensureFreshToken,
   fetchDay,
+  getConnection,
   markSynced,
   recordSyncError,
-  disconnect,
-  getConnection,
-} from "@/lib/fitbit";
+} from "@/lib/google-health";
 import {
   biometricSummary,
   createBiometric,
@@ -22,7 +22,7 @@ export const maxDuration = 60;
 
 const SPIKE_THRESHOLD = 65;
 
-/** Reports whether Fitbit is linked, without exposing any token material. */
+/** Reports whether Google Health is linked, without exposing token material. */
 export const GET = withUser(async (user) => {
   const conn = await getConnection(user.id);
   return ok({
@@ -34,11 +34,11 @@ export const GET = withUser(async (user) => {
 });
 
 /**
- * Pulls today's metrics from Fitbit and writes them as Vesper biometrics.
+ * Pulls today's metrics and writes them as Vesper biometrics.
  *
- * The intraday heart-rate series is downsampled rather than stored minute by
- * minute — 1,440 rows a day per user is a lot of storage for a chart that
- * shows a dozen points.
+ * The intraday heart-rate series is downsampled rather than stored point by
+ * point — Google returns up to 1,440 samples a day, which is a lot of rows for
+ * a chart that shows a few dozen.
  */
 export const POST = withUser(async (user) => {
   const limited = await enforceLimit("fitbitSync", user.id);
@@ -46,25 +46,27 @@ export const POST = withUser(async (user) => {
 
   const conn = await ensureFreshToken(user.id);
   if (!conn) {
-    return fail("Fitbit isn't connected, or the connection expired. Reconnect to continue.", 409);
+    return fail(
+      "Google Health isn't connected, or the connection expired. Reconnect to continue.",
+      409,
+    );
   }
 
   try {
-    const snapshot = await fetchDay(conn, "today");
+    const snapshot = await fetchDay(conn);
 
     const device = (await listDevices(user.id)).find((d) => d.provider === "fitbit");
     const deviceId = device?.id ?? null;
 
-    // Keep roughly one sample per 30 minutes from the intraday series.
+    // Keep roughly one sample per 30 minutes.
     const stride = Math.max(1, Math.ceil(snapshot.intraday.length / 48));
     const picked = snapshot.intraday.filter((_, i) => i % stride === 0);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = snapshot.date;
 
     let written = 0;
     let peakStress = 0;
 
     for (const point of picked) {
-      const recordedAt = new Date(`${today}T${point.time}`).toISOString();
       const stress = deriveStressIndex({
         hrv: snapshot.hrv,
         heartRate: point.value,
@@ -75,7 +77,7 @@ export const POST = withUser(async (user) => {
 
       await createBiometric(user.id, {
         deviceId,
-        recordedAt,
+        recordedAt: new Date(`${today}T${point.time}Z`).toISOString(),
         hrv: snapshot.hrv,
         restingHr: snapshot.restingHr,
         heartRate: point.value,
@@ -86,20 +88,9 @@ export const POST = withUser(async (user) => {
       written++;
     }
 
-    // Daily-only metrics (HRV, sleep) still deserve one row even when the plan
-    // doesn't expose an intraday heart-rate series.
-    if (!written && (snapshot.hrv || snapshot.restingHr || snapshot.sleepHours)) {
-      await createBiometric(user.id, {
-        deviceId,
-        hrv: snapshot.hrv,
-        restingHr: snapshot.restingHr,
-        heartRate: snapshot.restingHr,
-        respiration: snapshot.respiration,
-        sleepHours: snapshot.sleepHours,
-        steps: snapshot.steps,
-      });
-      written = 1;
-    } else if (snapshot.sleepHours != null) {
+    // Daily-only metrics still deserve a row when there's no intraday series
+    // (for example a device that only reports nightly summaries).
+    if (snapshot.sleepHours != null || (!written && (snapshot.hrv || snapshot.restingHr))) {
       await createBiometric(user.id, {
         deviceId,
         hrv: snapshot.hrv,
@@ -112,7 +103,9 @@ export const POST = withUser(async (user) => {
       written++;
     }
 
-    if (device) await updateDevice(user.id, device.id, { lastSyncAt: nowIso(), status: "connected" });
+    if (device) {
+      await updateDevice(user.id, device.id, { lastSyncAt: nowIso(), status: "connected" });
+    }
     await markSynced(user.id);
 
     await execute(
@@ -122,7 +115,7 @@ export const POST = withUser(async (user) => {
         newId("syn"),
         user.id,
         "biometric",
-        "fitbit_sync",
+        "google_health_sync",
         JSON.stringify({ samples: written, peakStress }),
         "synced",
         nowIso(),
@@ -135,9 +128,7 @@ export const POST = withUser(async (user) => {
     let intervention = null;
     if (summary.stressNow >= SPIKE_THRESHOLD) {
       const open = await activeInterventions(user.id);
-      const recent = open.some(
-        (i) => Date.now() - new Date(i.triggeredAt).getTime() < 45 * 60_000,
-      );
+      const recent = open.some((i) => Date.now() - new Date(i.triggeredAt).getTime() < 45 * 60_000);
       if (!recent) {
         intervention = await createIntervention(user.id, {
           ...recommendBreak(summary.stressNow, summary.hrvDelta),
@@ -159,7 +150,7 @@ export const POST = withUser(async (user) => {
       spikeDetected: summary.stressNow >= SPIKE_THRESHOLD,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Fitbit sync failed";
+    const message = err instanceof Error ? err.message : "Google Health sync failed";
     await recordSyncError(user.id, message);
     return fail(message, 502);
   }

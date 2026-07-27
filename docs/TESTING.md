@@ -15,6 +15,7 @@ npm run test         # 24 — rate limiting, password reset, account deletion
 npm run test:pg      # 23 — Postgres schema + queries (via PGlite, no server needed)
 npm run test:mail    # 24 — templates + real SMTP delivery
 npm run test:verify  # 27 — email verification lifecycle
+npm run test:googlehealth  # 44 — Google Health OAuth + API mapping
 npm run build        # production build
 ```
 
@@ -120,28 +121,47 @@ Remove-Item Env:SMTP_URL
 
 ---
 
-## 7. Fitbit (optional)
+## 7. Fitbit / Google Health (optional)
 
 Without credentials the Biometrics page shows "Not configured" and keeps using
 simulated readings — that's the expected default.
 
-To try the real flow, register a **Server** app at
-<https://dev.fitbit.com/apps> with callback
-`http://localhost:3000/api/integrations/fitbit/callback`, then:
+> The old `dev.fitbit.com` route no longer accepts new apps. Google is retiring
+> the Fitbit Web API in September 2026; Fitbit data now comes through the
+> **Google Health API**.
+
+To try the real flow:
+
+1. **[console.cloud.google.com](https://console.cloud.google.com)** → create a project
+2. **APIs & Services → Library** → search *Google Health API* → **Enable**
+3. **Credentials → Create credentials → OAuth client ID → Web application**
+   Authorized redirect URI (exactly):
+   ```
+   http://localhost:3000/api/integrations/google-health/callback
+   ```
+   Copy the **Client ID** and **Client secret**.
+4. **APIs & Services → OAuth consent screen → Audience** → under **Test users**
+   add your own Google address. Up to 100 without a security review.
+5. **Data Access** → add the `googlehealth` `*.readonly` scopes you want
+   (health metrics, activity and fitness, sleep).
+
+Then:
 
 ```powershell
-$env:FITBIT_CLIENT_ID="your-id"
-$env:FITBIT_CLIENT_SECRET="your-secret"
+$env:GOOGLE_CLIENT_ID="xxxxx.apps.googleusercontent.com"
+$env:GOOGLE_CLIENT_SECRET="GOCSPX-xxxx"
 npm run dev
 ```
 
-**Biometrics → Connect Fitbit** sends you to Fitbit's consent screen. After
-approving you land back on the page as *linked*; **Pull today's data** writes
-your real readings into the charts.
+**Biometrics → Connect Google Health** → approve → you land back as *linked* →
+**Pull today's data**.
 
-No Fitbit account? `npm run test:fitbit` exercises the entire flow — PKCE,
-token exchange, refresh rotation, encryption at rest, API mapping, rate limits,
-and revoked grants — against a local mock (46 assertions).
+Your Fitbit account must be linked to the Google account you authorise with,
+and the device needs to have synced recently for there to be data.
+
+No device or Google project? `npm run test:googlehealth` exercises the entire
+flow — PKCE, token exchange, refresh, encryption at rest, API mapping, partial
+consent, rate limits, revoked grants — against a local mock (44 assertions).
 
 ## 8. Try Postgres instead of SQLite
 
@@ -173,9 +193,9 @@ current no matter when you run it.
 
 ## Known limitations
 
-- **Biometrics are simulated unless you connect a Fitbit.** The stress-detection
-  logic and intervention loop are real either way. Apple HealthKit isn't
-  supported — it needs a native iOS app.
+- **Biometrics are simulated unless you connect Google Health.** The
+  stress-detection logic and intervention loop are real either way. Apple
+  HealthKit isn't supported — it needs a native iOS app.
 - **Voice journalling needs Chrome, Edge or Safari.** Firefox lacks the Web
   Speech API; the UI says so and falls back to typing.
 - **The companion runs locally by default.** Set `VESPER_LLM_API_KEY` to route
