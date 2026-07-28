@@ -456,4 +456,12 @@ export const COLUMN_MIGRATIONS: {
     definition: "TEXT",
     pgDefinition: "TEXT",
   },
+  // Google Health webhooks identify users by healthUserId, not by our id, so
+  // we cache the mapping when a connection is made.
+  {
+    table: "oauth_connections",
+    column: "health_user_id",
+    definition: "TEXT",
+    pgDefinition: "TEXT",
+  },
 ];

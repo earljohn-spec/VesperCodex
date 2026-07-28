@@ -120,6 +120,8 @@ export async function getConnection(userId: string): Promise<Connection | null> 
 export async function saveConnection(input: {
   userId: string;
   providerUserId: string | null;
+  /** Google Health's own user id — webhooks identify users by this. */
+  healthUserId?: string | null;
   accessToken: string;
   /** Google omits this on refresh; keep the existing one when absent. */
   refreshToken?: string;
@@ -147,7 +149,8 @@ export async function saveConnection(input: {
     await execute(
       `UPDATE oauth_connections
          SET provider_user_id = ?, access_token = ?, refresh_token = ?, scopes = ?,
-             expires_at = ?, last_error = NULL, updated_at = ?
+             expires_at = ?, last_error = NULL, updated_at = ?,
+             health_user_id = COALESCE(?, health_user_id)
        WHERE id = ?`,
       [
         input.providerUserId,
@@ -156,6 +159,7 @@ export async function saveConnection(input: {
         input.scopes,
         expiresAt,
         ts,
+        input.healthUserId ?? null,
         existing.id,
       ],
     );
@@ -166,8 +170,8 @@ export async function saveConnection(input: {
   await execute(
     `INSERT INTO oauth_connections
        (id, user_id, provider, provider_user_id, access_token, refresh_token, scopes,
-        expires_at, last_sync_at, last_error, created_at, updated_at)
-     VALUES (?,?,?,?,?,?,?,?,NULL,NULL,?,?)`,
+        expires_at, last_sync_at, last_error, created_at, updated_at, health_user_id)
+     VALUES (?,?,?,?,?,?,?,?,NULL,NULL,?,?,?)`,
     [
       id,
       input.userId,
@@ -179,6 +183,7 @@ export async function saveConnection(input: {
       expiresAt,
       ts,
       ts,
+      input.healthUserId ?? null,
     ],
   );
   return id;
@@ -475,6 +480,25 @@ export async function fetchDay(conn: Connection, when = new Date()): Promise<Hea
     steps: totalSteps > 0 ? totalSteps : null,
     intraday,
   };
+}
+
+/**
+ * Google Health identifies users in webhooks by `healthUserId`, which is
+ * distinct from the OAuth subject. The mapping never changes, so it's fetched
+ * once at connect time and cached.
+ */
+export async function fetchHealthUserId(accessToken: string): Promise<string | null> {
+  try {
+    const res = await fetch(`${apiBase()}/v4/users/me:getIdentity`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) return null;
+    const json = (await res.json()) as { healthUserId?: string; name?: string };
+    return json.healthUserId ?? json.name?.split("/").pop() ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function markSynced(userId: string) {

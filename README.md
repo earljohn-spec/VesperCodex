@@ -120,6 +120,7 @@ npm run test:pg     # Postgres schema + query compatibility (via PGlite)
 npm run test:mail   # email templates + real SMTP delivery
 npm run test:verify # email verification lifecycle
 npm run test:googlehealth # Google Health OAuth, encryption, API mapping
+npm run test:webhook      # webhook signature verification
 npx tsx scripts/check.ts   # print derived stats for the demo account
 ```
 
@@ -271,6 +272,14 @@ without one, which is plenty for development and a private beta.
 Without credentials the page says so plainly and keeps using simulated
 readings. `npm run test:googlehealth` runs the whole flow against a local mock
 of Google's documented v4 response shapes.
+
+**Real-time push.** Manual syncing undercuts the premise of catching a stress
+spike *as it happens*, so there's a webhook receiver at
+`/api/integrations/google-health/webhook`. It implements Google's two-step
+verification handshake, verifies the ECDSA-P256 signature on every notification
+against Google's rotating public keyset, answers `204` immediately and ingests
+asynchronously. Manual and pushed syncs share one code path, so spike detection
+and nudge deduplication behave identically either way.
 
 **Still not implemented**
 - Apple HealthKit — needs a native iOS companion app, so it's a bigger piece

@@ -16,6 +16,7 @@ npm run test:pg      # 23 — Postgres schema + queries (via PGlite, no server n
 npm run test:mail    # 24 — templates + real SMTP delivery
 npm run test:verify  # 27 — email verification lifecycle
 npm run test:googlehealth  # 44 — Google Health OAuth + API mapping
+npm run test:webhook       # 19 — webhook signature verification
 npm run build        # production build
 ```
 
@@ -158,6 +159,28 @@ npm run dev
 
 Your Fitbit account must be linked to the Google account you authorise with,
 and the device needs to have synced recently for there to be data.
+
+### Testing the webhook without a public URL
+
+The webhook needs an HTTPS endpoint Google can reach, but you can exercise the
+handler locally. Start the server with a token and the dev signature bypass:
+
+```powershell
+$env:GOOGLE_HEALTH_WEBHOOK_TOKEN="Bearer test-token"
+$env:GOOGLE_HEALTH_SKIP_SIGNATURE="true"
+npm run dev
+```
+
+Then, from another terminal:
+
+```powershell
+# Google's handshake: authorised must be 200, unauthorised must be 401
+curl -X POST -H "Authorization: Bearer test-token" -H "Content-Type: application/json" `
+  -d '{\"type\":\"verification\"}' http://localhost:3000/api/integrations/google-health/webhook
+```
+
+A real notification should return `204` immediately. The bypass only works
+outside production — `npm run test:webhook` asserts that.
 
 No device or Google project? `npm run test:googlehealth` exercises the entire
 flow — PKCE, token exchange, refresh, encryption at rest, API mapping, partial

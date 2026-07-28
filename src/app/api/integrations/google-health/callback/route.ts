@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { consumeState, exchangeCode, saveConnection } from "@/lib/google-health";
+import {
+  consumeState,
+  exchangeCode,
+  fetchHealthUserId,
+  saveConnection,
+} from "@/lib/google-health";
 import { createDevice, listDevices, updateDevice } from "@/lib/repos/biometrics";
 
 export const runtime = "nodejs";
@@ -40,9 +45,13 @@ export async function GET(req: Request) {
       return back("norefresh");
     }
 
+    // Needed so webhook notifications can be traced back to this account.
+    const healthUserId = await fetchHealthUserId(tokens.access_token);
+
     await saveConnection({
       userId: check.userId,
       providerUserId: tokens.sub,
+      healthUserId,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
       scopes: tokens.scope ?? "",
