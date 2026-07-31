@@ -16,6 +16,7 @@ import {
 import { Badge, Button, Card, CardHeader, useToast } from "@/components/ui";
 import { PageHeader } from "@/components/shared";
 import { useOffline } from "@/components/offline";
+import { clearOfflineData } from "@/components/service-worker";
 import { logoutAction } from "@/lib/actions/auth";
 import {
   ChangePasswordPanel,
@@ -95,7 +96,7 @@ export function SettingsView({
               {user.timezone && ` · ${user.timezone}`}
             </p>
           </div>
-          <form action={logoutAction} className="shrink-0">
+          <form action={logoutAction} className="shrink-0" onSubmit={() => clearOfflineData()}>
             <Button type="submit" variant="outline">
               <LogOut className="h-4 w-4" />
               Sign out

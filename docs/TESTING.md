@@ -17,10 +17,11 @@ npm run test:mail    # 24 — templates + real SMTP delivery
 npm run test:verify  # 27 — email verification lifecycle
 npm run test:googlehealth  # 44 — Google Health OAuth + API mapping
 npm run test:webhook       # 19 — webhook signature verification
+npm run test:offline       # 35 — service worker caching + offline fallback
 npm run build        # production build
 ```
 
-98 assertions total. If all of these pass, the backend is sound.
+196 assertions total. If all of these pass, the backend is sound.
 
 ---
 
@@ -56,10 +57,48 @@ Credentials are pre-filled — just click **Sign in**.
 
 ### Offline mode
 
+**Part A — queued writes** (works in `npm run dev`)
+
 1. **Settings → Simulate being offline** → on
 2. Go to **Journal**, add an entry — it saves and shows *pending*
 3. Toggle offline back **off**
 4. The queue drains automatically and the pending badge clears
+
+**Part B — reloading while offline** (needs a production build)
+
+The service worker is disabled in `npm run dev` on purpose: Turbopack serves
+unhashed modules that change on every keystroke, and a cache-first worker in
+front of them makes debugging baffling. So test this against a real build:
+
+```powershell
+npm run build
+npm start
+```
+
+Then, at <http://localhost:3000>:
+
+1. Sign in, visit **Today**, **Journal** and **Habits** so their data is cached
+2. Open DevTools → **Application** → **Service Workers**. You should see
+   `sw.js` — *activated and is running*
+3. Under **Cache Storage** there should be three caches:
+   `vesper-static-v1`, `vesper-data-v1`, `vesper-shell-v1`
+4. Switch to the **Network** tab and set throttling to **Offline**
+5. **Press F5.** This is the case that used to fail — before, you got the
+   browser's "No internet" page. Now Vesper's own offline screen renders,
+   showing anything still waiting to sync.
+6. Click **Write anyway** → the journal composer opens; write an entry and it
+   queues
+7. Set throttling back to **No throttling**, click **Try again** → you land on
+   the dashboard and the queue drains
+
+To confirm the privacy behaviour: while online, sign out, then look at
+**Cache Storage** again — `vesper-data-v1` is gone, so the next person to use
+the machine can't read the previous user's entries from disk. `vesper-static-v1`
+survives, because JS bundles aren't personal.
+
+> Working on the worker itself and want it active in dev? Set
+> `NEXT_PUBLIC_VESPER_SW_DEV=1` in `.env.local`. Remember to unregister it
+> afterwards, or stale chunks will haunt you.
 
 ---
 

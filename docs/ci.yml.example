@@ -27,8 +27,29 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      # All seven suites. They're fast (~10s total) and each one guards a
+      # different boundary, so running only `npm run test` leaves most of the
+      # app uncovered.
       - name: Security tests
         run: npm run test
+
+      - name: Postgres data layer
+        run: npm run test:pg
+
+      - name: Email delivery
+        run: npm run test:mail
+
+      - name: Email verification
+        run: npm run test:verify
+
+      - name: Google Health integration
+        run: npm run test:googlehealth
+
+      - name: Webhook signature verification
+        run: npm run test:webhook
+
+      - name: Offline mode
+        run: npm run test:offline
 
       - name: Seed demo data
         run: npm run db:seed

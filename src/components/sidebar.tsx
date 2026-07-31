@@ -20,6 +20,7 @@ import {
 import { cn, initials } from "@/lib/utils";
 import { logoutAction } from "@/lib/actions/auth";
 import { OfflineBadge } from "./offline";
+import { clearOfflineData } from "./service-worker";
 import type { User } from "@/lib/types";
 
 const NAV = [
@@ -124,7 +125,7 @@ export function Sidebar({
             <p className="truncate text-sm font-medium text-white">{user.name}</p>
             <p className="truncate text-[11px] text-ink-500">{user.email}</p>
           </div>
-          <form action={logoutAction}>
+          <form action={logoutAction} onSubmit={() => clearOfflineData()}>
             <button
               type="submit"
               aria-label="Sign out"

@@ -13,12 +13,12 @@ interface Status {
   lastError: string | null;
 }
 
-/** Human-readable copy for the ?fitbit= codes the OAuth callback redirects with. */
+/** Human-readable copy for the ?health= codes the OAuth callback redirects with. */
 const CALLBACK_MESSAGES: Record<string, { tone: "success" | "error" | "info"; text: string }> = {
   connected: { tone: "success", text: "Google Health connected. Pull your data whenever you like." },
   denied: { tone: "info", text: "Connection cancelled — nothing was shared." },
   expired: { tone: "error", text: "That authorization took too long. Try connecting again." },
-  invalid: { tone: "error", text: "That Fitbit response wasn't valid. Try connecting again." },
+  invalid: { tone: "error", text: "That Google Health response wasn't valid. Try connecting again." },
   session: { tone: "error", text: "Your session changed mid-connection. Sign in and retry." },
   error: { tone: "error", text: "Connection failed. Try again in a moment." },
   norefresh: {

@@ -44,8 +44,15 @@ chart over 30 days, with best/hardest days surfaced.
 delete when something isn't working. Missing a day is treated as data, not failure.
 
 **Offline mode** — Journalling, habit ticks, and breathing exercises all work with no connection.
-Writes queue in `localStorage` and replay automatically when you reconnect. Toggle
-**Settings → Simulate being offline** to exercise it without unplugging anything.
+Writes queue in `localStorage` and replay automatically when you reconnect. A service worker
+precaches the app shell and the last data you loaded, so Vesper still **opens** after a reload
+with no connection instead of showing the browser's error page. Toggle
+**Settings → Simulate being offline** to exercise the queue without unplugging anything.
+
+The worker is production-only (`npm run build && npm start`) — a cache-first worker in front of
+Turbopack's dev modules makes debugging miserable. Reads are network-first, so being online never
+gives you stale data; the cached copy appears only when the network genuinely fails. Writes are
+left to the outbox rather than cached, and signing out purges cached personal data from disk.
 
 **Visible memory** — An AI that claims to remember you should let you see the memory. The Memory
 page lists every note Vesper has formed, weighted by how heavily it leans on them. Edit or delete
@@ -132,15 +139,23 @@ flows, offline mode, and how to view real emails in a local inbox.
 
 ## Checking for problems
 
-Four commands, cheapest first. All four are currently clean.
+Cheapest first. All of these are currently clean.
 
 ```bash
 npm run typecheck   # type errors
 npm run lint        # unused vars, React rule violations, a11y
-npm run test        # 24 assertions on auth/rate-limit/deletion
+npm run test        # 24 — auth, rate limiting, account deletion
+npm run test:pg     # 23 — Postgres schema + queries (PGlite, no server needed)
+npm run test:mail   # 24 — email templates + real SMTP delivery
+npm run test:verify # 27 — email verification lifecycle
+npm run test:googlehealth  # 44 — Google Health OAuth + API mapping
+npm run test:webhook       # 19 — webhook ECDSA signature verification
+npm run test:offline       # 35 — service worker caching + offline fallback
 npm run build       # catches anything only production surfaces
 npx tsx scripts/check.ts   # verifies seeded data is coherent
 ```
+
+196 assertions across seven suites.
 
 Then open DevTools (F12) → Console while clicking through the app. React
 reports duplicate keys, hydration mismatches, and invalid nesting there and
@@ -283,12 +298,12 @@ and nudge deduplication behave identically either way.
 
 **Still not implemented**
 - Apple HealthKit — needs a native iOS companion app, so it's a bigger piece
-  of work than the Fitbit REST integration
+  of work than a REST integration
+- Multi-device sync conflict resolution beyond last-write-wins
 
 A ready-to-use CI pipeline lives at `docs/ci.yml.example`. Copy it to
 `.github/workflows/ci.yml` to enable it — it runs typecheck, lint, the
 security tests, a build, and a production dependency audit on every push.
-- Multi-device sync conflict resolution beyond last-write-wins
 
 **If you handle real users' mental-health data**, note that this content is
 likely regulated (HIPAA in the US, GDPR special-category data in the EU).
